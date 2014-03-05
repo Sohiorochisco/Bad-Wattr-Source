@@ -17,6 +17,8 @@
 
 #define	WF_BUFF_DPTH
 #define	WF_BUFF_WL
+#include "mem/wattr_queue.h"
+#include "mem/wattr_alloc.h"
 
 #endif
 

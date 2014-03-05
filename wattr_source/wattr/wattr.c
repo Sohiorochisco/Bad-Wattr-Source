@@ -12,6 +12,7 @@
  *
  * \return Unused (ANSI-C compatibility).
  */
+
 int main(void)
 {
     /* Initialize the SAM system */
@@ -19,6 +20,6 @@ int main(void)
 
     while (1) 
     {
-        
+		
     }
 }
