@@ -23,5 +23,10 @@ int main(void)
     while (1) 
     {
 		
+		
+		
+		
+		//Service watchdog timer
+		WDT->WDT_CR = WDT_CR_KEY_PASSWD | WDT_CR_WDRSTT;
     }
 }

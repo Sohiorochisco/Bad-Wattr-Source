@@ -239,9 +239,16 @@ wattr_periph_config(void)
 #define X1(a) a |
 wattr_output_config(void)
 {
+	//Enable PIO control of lines
 	PIOA->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
 	PIOB->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
 	PIOC->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
 	PIOD->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
+	
+	//Enable outputs on the lines
+	PIOA->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
+	PIOB->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
+	PIOC->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
+	PIOD->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
 	
 }

@@ -20,9 +20,9 @@
     <OverrideVtor>false</OverrideVtor>
     <CacheFlash>true</CacheFlash>
     <ProgFlashFromRam>true</ProgFlashFromRam>
-    <RamSnippetAddress />
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
     <UncachedRange />
-    <OverrideVtorValue />
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
     <BootSegment>2</BootSegment>
     <eraseonlaunchrule>1</eraseonlaunchrule>
     <AsfFrameworkConfig>
@@ -101,6 +101,7 @@
   <armgcc.common.outputfiles.eep>True</armgcc.common.outputfiles.eep>
   <armgcc.common.outputfiles.bin>True</armgcc.common.outputfiles.bin>
   <armgcc.common.outputfiles.srec>True</armgcc.common.outputfiles.srec>
+  <armgcc.compiler.preprocessor.PreprocessOnly>True</armgcc.compiler.preprocessor.PreprocessOnly>
   <armgcc.compiler.symbols.DefSymbols>
     <ListValues>
       <Value>DEBUG</Value>
@@ -152,13 +153,49 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ade7753.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="cmsis\src\startup_sam4e.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="cmsis\src\system_sam4e.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="Debug\ade7753.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="headers\ade7753.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="headers\mem\wattr_alloc.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="headers\mem\wattr_queue.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="headers\pdc_periph.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="headers\wattr_mem.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="headers\wattr_utils.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="wattr_pio.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="wattr.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="wattr_alloc.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="wattr_pio.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="wattr_queue.c">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
@@ -166,6 +203,12 @@
     <Folder Include="cmsis\" />
     <Folder Include="cmsis\linkerScripts\" />
     <Folder Include="cmsis\src\" />
+    <Folder Include="Debug\" />
+    <Folder Include="Debug\cmsis\" />
+    <Folder Include="Debug\cmsis\linkerScripts\" />
+    <Folder Include="Debug\cmsis\src\" />
+    <Folder Include="headers\" />
+    <Folder Include="headers\mem\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cmsis\linkerScripts\sam4e16e_flash.ld">
@@ -178,6 +221,12 @@
       <SubType>compile</SubType>
     </None>
     <None Include="cmsis\linkerScripts\sam4e_sram.ld">
+      <SubType>compile</SubType>
+    </None>
+    <None Include="Debug\makedep.mk">
+      <SubType>compile</SubType>
+    </None>
+    <None Include="Debug\Makefile">
       <SubType>compile</SubType>
     </None>
   </ItemGroup>
