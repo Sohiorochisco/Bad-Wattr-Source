@@ -15,9 +15,9 @@ static queue big_mqueue;
 static queue med_mqueue;
 static queue sml_mqueue;
 
-static char big_q_buf[BIG_BLOCK_NUM];
-static char med_q_buf[MED_BLOCK_NUM];
-static char sml_q_buf[SML_BLOCK_NUM];
+static void *big_q_buf[BIG_BLOCK_NUM];
+static void *med_q_buf[MED_BLOCK_NUM];
+static void *sml_q_buf[SML_BLOCK_NUM];
 
 void pools_init()
 {
@@ -39,7 +39,7 @@ void pools_init()
 	return 0;
 }
 
-char * b_alloc(uint32_t size)
+void * b_alloc(uint32_t size)
 {
 	char *b = 0;
 	switch(size){
@@ -57,7 +57,7 @@ char * b_alloc(uint32_t size)
 	return b;
 }
 
-uint32_t b_free(char *p, uint32_t size)
+uint32_t b_free(void *p, uint32_t size)
 {
 	uint32_t e;
 	switch(size){
@@ -72,4 +72,21 @@ uint32_t b_free(char *p, uint32_t size)
 	default:
 	}
 	return e;
+}
+
+inline wbuff *alloc_wbuff(uint32_t l)
+{
+	wbuff *b;
+	/*Some checks necessary to ensure that the block size is not too small
+	 *for the minimal wbuff
+	 */
+	if(l > 4){
+		b = (wbuff*)b_alloc(l);
+	}else{
+		b = NULL;
+	}
+	if(b != NULL){
+		b->length = l - 4;
+	}
+	return wbuff;
 }

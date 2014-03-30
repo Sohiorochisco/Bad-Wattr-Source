@@ -29,12 +29,7 @@ static uint32_t gs_ul_spi_clock = 500000;
 #define POWER_FACTOR				0.827f
 #define CENTS_PER_KWH				0.13f
 
-// lists bytes necessary to transfer in order to read or write to this register.
-#define ADE_1ZBYTES ,0x00
-#define ADE_2ZBYTES ,0x00,0x00,
-#define ADE_3ZBYTES , 0x00,0x00,0x00
-
-// All write operations must be OR'ed with 0b10......
+// All write operations must be OR'ed with 0b80......
 #define ADE_WRITE_MASK					0x80
 
 // Lists of things that might have gone wrong...
@@ -60,24 +55,23 @@ static uint32_t gs_ul_spi_clock = 500000;
 #define ADE_GAIN_PGA2_8					0x60
 #define ADE_GAIN_PGA2_16				0x80
 
-// Listing of registers on the chip, with the size of the register in bytes. See Page 52-54 on the datasheet
-// Waveform sampling register
+/* Listing of registers on the chip, with the size of the register in bytes.
+ * See Page 52-54 on the datasheet.
+ */
+
 #define ADE_REG_WF				0x01
 #define ADE_REG_WF_WBITS			24
 
-//Active Energy register
+
 #define ADE_REG_AENERGY				0x02
 #define ADE_REG_AENERGY_WBITS			24
 
-//Reactive energy register
 #define ADE_REG_RAENERGY			0x03
 #define ADE_REG_RAENERGY_WBITS			24
 
-//Bizarre "line energy" quantity...
 #define ADE_REG_LAENERGY			0x04
 #define ADE_REG_LAENERGY_WBITS			24
 
-//Apparent energy register
 #define ADE_REG_VAENERGY			0x05
 #define ADE_REG_VAENERGY_WBITS			24
 
@@ -191,19 +185,9 @@ static uint32_t gs_ul_spi_clock = 500000;
 
 
 
-
-//Define buffers for commands to send to the ADE7753
-#define ADE_STARTUP_BUF_ID			0
-#define ADE_ZX_BUF_ID				1
-#define ADE_IR1_BUF_ID				2
-
-
-int ade_transfer(int buffer_id);
-
-inline char * ade_write_reg(uint32_t w,uint32_t wl, char addr, char *buf)
-{
-	uint32_t nw = w <<(24 % wl);
-	buff[0] = 
-
+/*Used to generate the byte-stream for writing a data word to one of the registers on
+ *the ADE7753
+ */
+inline void ade_write_reg(uint32_t w,uint32_t wl, uint8_t addr, uint8_t *buf);
 
 #endif /* ADE7753_H_ */

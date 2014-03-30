@@ -12,23 +12,24 @@
 
 #ifndef WATTR_QUEUE
 #define WATTR_QUEUE
+#endif
 typedef struct{
-	uint8_t **buf;
+	void **buf;
 	uint32_t length;
 	uint32_t first;
 	uint32_t last;
-} queue
+}queue;
 
 /*init_queue is used to initialize a static queue. The array of pointers is
  * statically allocated independently, then its handle should be passed to buff.
  */
-void init_queue(queue *q, uint8_t **buff);
+void init_queue(queue *q, void **buff, uint32_t l);
 
 /*Used to pass ownership of a memory block to the queue. Obviously, the memory
  * should no longer be accessed by the previous owner once this function is 
  * called. 
  */
-uint32_t enqueue(queue *q,uint8_t *p);
+uint32_t enqueue(queue *q,void *p);
 
 /*dequeue is used to acquire ownership of a memory block from queue q. 
  * Since this may be called from lower-priority functions or handlers, and it

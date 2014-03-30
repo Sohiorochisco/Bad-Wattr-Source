@@ -6,6 +6,8 @@
  */ 
 
 #include "sam.h"
+#include "headers/wattr_mem.h"
+#include "headers/wattr_utils.h"
 
 /**
  * \brief Application entry point.

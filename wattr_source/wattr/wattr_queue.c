@@ -9,7 +9,7 @@
 
 /*Initializes a queue, with a max buffer size of bSize
 */
-void init_queue(queue q,uint32_t **buff, uint32_t l)
+void init_queue(queue q,void **buff, uint32_t l)
 {
 	b->length = l;
 	b->buff = buff;
@@ -25,21 +25,22 @@ static void wrap(uint32_t i, uint32_t l);
  *  "first" should be the index of the empty address preceding the buffer,
  *   and "last" should be the index of the empty address following the buffer
  */ 
-uint32_t enqueue(queue *q,uint8_t *p)
+uint32_t enqueue(queue *q,void *p)
 {
+	uint32_t st;
 	if (q->first == q->last){
 		/*queue overflow */
-		p = 0;
+		st = 1;
 	}else{
-		p = q->first;
+		q->buff[q->first] = p;
 		wrap(q->first,q->length);
 	return 0;
 }
 
-uint8_t * dequeue(queue *q)
+void * dequeue(queue *q)
 {
 	uint32_t t = q->last; 
-	cpu_irq_disable();
+	char *p;
 	wrap(t, q->length); //Test if the queue is empty
 	if (t != q->first){
 		q->last = t;
@@ -48,8 +49,7 @@ uint8_t * dequeue(queue *q)
 		/*Queue underflow */
 		p = 0;
 	}
-	cpu_irq_enable();
-	return p;
+	return (void*)p;
 }
 
 /*Shifts the specified index to the correct point in the buffer array
