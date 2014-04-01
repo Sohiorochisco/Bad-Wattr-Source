@@ -11,7 +11,7 @@
 
 #ifndef PDC_PERIPH
 #define PDE_PERIPH
-
+#include "wattr_mem.h"
 typedef struct{
 	wbuff *(*read)(void);
 	uint32_t (*write)(wbuff *w);
@@ -20,7 +20,7 @@ typedef struct{
 /*constructor for ade7753 spi pdc interface*/
 void make_ade7753_driver(pdc_periph *ade);
 
-/*constructor for ftdi uart pdc interface */
-void make_ftdi_driver(pdc_periph *ftdi);
+/*constructor for rs232 uart pdc interface */
+void make_rs232_driver(pdc_periph *rs232);
 
 #endif
