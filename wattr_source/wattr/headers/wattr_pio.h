@@ -17,6 +17,8 @@ void fp_ubutton_handler(void);
 void fp_dbutton_handler(void);
 void fp_lbutton_handler(void);
 void fp_rbutton_handler(void);
+void ade_zx_handler(void);
+void ade_irq_handler(void);
 
 //Method for configuring pio pins
 void pio_config(void);

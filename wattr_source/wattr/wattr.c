@@ -13,11 +13,7 @@
 #include "headers/wattr_pio.h"
 
 pdc_periph wattr_uart;
-/**
- * \brief Application entry point.
- *
- * \return Unused (ANSI-C compatibility).
- */
+
 
 int main(void)
 {

@@ -8,7 +8,7 @@
 
 #ifndef ADE7753_H_
 #define ADE7753_H_
-
+#include "sam.h"
 #define ADE_SPI_CS						1
 #define ADE_SPI_CLK_POLARITY			0
 #define ADE_SPI_CLK_PHASE				0
