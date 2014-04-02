@@ -30,6 +30,8 @@ typedef struct{
  *the space for the length tag at the beginning of the struct.
  */	
 inline wbuff *alloc_wbuff(uint32_t l);
+//Function for properly freeing wbuffs
+inline uint32_t free_wbuff(wbuff *buff);
 
 /*Used to allocate a single block of memory from one of the memory pools. The
  * only valid values for "size" are the values assigned to the macros above.

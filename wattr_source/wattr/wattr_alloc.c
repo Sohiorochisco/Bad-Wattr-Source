@@ -59,7 +59,7 @@ void * b_alloc(uint32_t size)
 
 uint32_t b_free(void *p, uint32_t size)
 {
-	uint32_t e;
+	uint32_t e = 1;
 	switch(size){
 	case BIG_BLOCK_WL:
 		e = enqueue(&big_mqueue, p);
@@ -69,7 +69,9 @@ uint32_t b_free(void *p, uint32_t size)
 		break;
 	case SML_BLOCK_WL:
 		e = enqueue(&sml_mqueue, p);
+		break;
 	default:
+		e = 1;
 	}
 	return e;
 }
@@ -88,5 +90,11 @@ inline wbuff *alloc_wbuff(uint32_t l)
 	if(b != NULL){
 		b->length = l - 4;
 	}
-	return wbuff;
+	return b;
+}
+
+inline uint32_t free_wbuff(wbuff *buff)
+{
+	l = 4 + buff->length
+	return b_free(buff,l);
 }
