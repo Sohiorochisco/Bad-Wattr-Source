@@ -13,6 +13,7 @@
 #ifndef WATTR_QUEUE
 #define WATTR_QUEUE
 #endif
+#include "sam.h"
 typedef struct{
 	void **buf;
 	uint32_t length;
@@ -36,6 +37,6 @@ uint32_t enqueue(queue *q,void *p);
  * is not fully reentrant, interrupts are disabled for most of the execution.
  * Thus, this should not be called from within a handler.
  */
-uint8_t * dequeue(queue *q);
+void * dequeue(queue *q);
 
 #define WATTR_QUEUE

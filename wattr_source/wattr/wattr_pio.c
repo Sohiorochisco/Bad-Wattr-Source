@@ -5,23 +5,28 @@
  * Created: 3/21/2014 4:21:53 PM
  *  Author: mhaynes
  */ 
-#include "headers/ade7753.h"
+#include "sam.h"
+#include "headers/wattr_pio.h"
+
+
 
 
 
 #define ONES 0xFFFFFFFF
 //Define empty macros for unused entries
-#define X0(a,b,c,d,e)
-#define X0(a,b,c,d)
-#define X0(a,b)
-#define X0(a)
+#define X05(a,b,c,d,e)
+#define X04(a,b,c,d)
+#define X03(a,b,c)
+#define X02(a,b)
+#define X01(a)
 //List interrupt lines and trigger conditions
 //In order of priority for each peripheral.
 //Use format ENTRY*PIA letter*(line num,both edge,rising edge,falling edge,
 //handler pointer)
+	//ENTRYA(PIO_PER_P15,0,0,PIO_FELLSR_P15,&ade_irq_handler)
+	//ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)
+	
 #define WATTR_INTERRUPT_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
-	ENTRYA(PIO_PER_P15,0,0,PIO_FELLSR_P15,&ade_irq_handler)\
-	ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)\
 	ENTRYD(PIO_PER_P27,0,PIO_REHLSR_P27,0,&fp_ubutton_handler)\
 	ENTRYD(PIO_PER_P25,0,PIO_REHLSR_P25,0,&fp_dbutton_handler)\
 	ENTRYD(PIO_PER_P26,0,PIO_REHLSR_P26,0,&fp_lbutton_handler)\
@@ -31,7 +36,7 @@
 
 
 //Define as follows:
-// X(pio id, 
+// X(pio id) 
 #define WATTR_OUTPUT_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
 	ENTRYD(PIO_PER_P20)\
 	ENTRYD(PIO_PER_P21)\
@@ -44,11 +49,19 @@
 
 //Defines the lines under control of peripherals.
 // Use format ENTRY*PIO block*(pin mask,periph bit 1, bit 2)
+/*SPI MISO */
+/*SPI MOSI */
+/*SPI NPCS0	*/
+/*SPI SPCK	*/
+/*UART0 TX */
+/*UART0 RX */
 #define WATTR_PERIPH_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
-	ENTRYA(PIO_PDR_P12,0,0)\//SPI MISO
-	ENTRYA(PIO_PDR_P13,0,0)\//SPI MOSI
-	ENTRYA(PIO_PDR_P11,0,0)\/*SPI NPCS0	*/
-	ENTRYA(PIO_PDR_P14,0,0)\/*SPI SPCK		*/
+	ENTRYA(PIO_PDR_P12,0,0)\
+	ENTRYA(PIO_PDR_P13,0,0)\
+	ENTRYA(PIO_PDR_P11,0,0)\
+	ENTRYA(PIO_PDR_P14,0,0)\
+	ENTRYA(PIO_PDR_P10,0,0)\
+	ENTRYA(PIO_PDR_P0 ,0,0)\
 0/*Avoid trailing operator */
 
 
@@ -58,31 +71,31 @@
 //Interrupt vector definitions
 #define X1(a,b,c,d,e) a |
 
-config_pio_irq()
+static void config_pio_irq(void)
 {
 	//Enable PIO control of the lines
-	PIOA->PIO_PER |= WATTR_INTERRUPT_LINES(X1,X0,X0,X0);
-	PIOB->PIO_PER |= WATTR_INTERRUPT_LINES(X0,X1,X0,X0);
-	PIOC->PIO_PER |= WATTR_INTERRUPT_LINES(X0,X0,X1,X0);
-	PIOD->PIO_PER |= WATTR_INTERRUPT_LINES(X0,X0,X0,X1);
+	PIOA->PIO_PER |= WATTR_INTERRUPT_LINES(X1,X05,X05,X05);
+	PIOB->PIO_PER |= WATTR_INTERRUPT_LINES(X05,X1,X05,X05);
+	PIOC->PIO_PER |= WATTR_INTERRUPT_LINES(X05,X05,X1,X05);
+	PIOD->PIO_PER |= WATTR_INTERRUPT_LINES(X05,X05,X05,X1);
 	
 	//Set interrupt lines as input only (disable output writes)
-	PIOA->PIO_ODR |= WATTR_INTERRUPT_LINES(X1,X0,X0,X0);
-	PIOB->PIO_ODR |= WATTR_INTERRUPT_LINES(X0,X1,X0,X0);
-	PIOC->PIO_ODR |= WATTR_INTERRUPT_LINES(X0,X0,X1,X0);
-	PIOD->PIO_ODR |= WATTR_INTERRUPT_LINES(X0,X0,X0,X1);
+	PIOA->PIO_ODR |= WATTR_INTERRUPT_LINES(X1,X05,X05,X05);
+	PIOB->PIO_ODR |= WATTR_INTERRUPT_LINES(X05,X1,X05,X05);
+	PIOC->PIO_ODR |= WATTR_INTERRUPT_LINES(X05,X05,X1,X05);
+	PIOD->PIO_ODR |= WATTR_INTERRUPT_LINES(X05,X05,X05,X1);
 	
 	//Enable the input interrupt for each line
-	PIOA->PIO_IER |= WATTR_INTERRUPT_LINES(X1,X0,X0,X0);
-	PIOB->PIO_IER |= WATTR_INTERRUPT_LINES(X0,X1,X0,X0);
-	PIOC->PIO_IER |= WATTR_INTERRUPT_LINES(X0,X0,X1,X0);
-	PIOD->PIO_IER |= WATTR_INTERRUPT_LINES(X0,X0,X0,X1);
+	PIOA->PIO_IER |= WATTR_INTERRUPT_LINES(X1,X05,X05,X05);
+	PIOB->PIO_IER |= WATTR_INTERRUPT_LINES(X05,X1,X05,X05);
+	PIOC->PIO_IER |= WATTR_INTERRUPT_LINES(X05,X05,X1,X05);
+	PIOD->PIO_IER |= WATTR_INTERRUPT_LINES(X05,X05,X05,X1);
 	
 	//Only Edge-detection interrupts (no level based)
-	PIOA->PIO_ESR |= WATTR_INTERRUPT_LINES(X1,X0,X0,X0);
-	PIOB->PIO_ESR |= WATTR_INTERRUPT_LINES(X0,X1,X0,X0);
-	PIOC->PIO_ESR |= WATTR_INTERRUPT_LINES(X0,X0,X1,X0);
-	PIOD->PIO_ESR |= WATTR_INTERRUPT_LINES(X0,X0,X0,X1);
+	PIOA->PIO_ESR |= WATTR_INTERRUPT_LINES(X1,X05,X05,X05);
+	PIOB->PIO_ESR |= WATTR_INTERRUPT_LINES(X05,X1,X05,X05);
+	PIOC->PIO_ESR |= WATTR_INTERRUPT_LINES(X05,X05,X1,X05);
+	PIOD->PIO_ESR |= WATTR_INTERRUPT_LINES(X05,X05,X05,X1);
 	
 #define X2(a,b,c,d,e) b |
 	
@@ -93,27 +106,27 @@ config_pio_irq()
 	PIOD->PIO_AIMER = ONES;
 	
 	//Set the double - edge interrupts
-	PIOA->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X2,X0,X0,X0);
-	PIOB->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X0,X2,X0,X0);
-	PIOC->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X0,X0,X2,X0);
-	PIOD->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X0,X0,X0,X2);
+	PIOA->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X2,X05,X05,X05);
+	PIOB->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X05,X2,X05,X05);
+	PIOC->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X05,X05,X2,X05);
+	PIOD->PIO_AIMDR |= WATTR_INTERRUPT_LINES(X05,X05,X05,X2);
 	
 #define X3(a,b,c,d,e) c |
 	
 	//Set the rising edge interrupts
-	PIOA->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X3,X0,X0,X0);
-	PIOB->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X0,X3,X0,X0);
-	PIOC->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X0,X0,X3,X0);
-	PIOD->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X0,X0,X0,X3);
+	PIOA->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X3,X05,X05,X05);
+	PIOB->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X05,X3,X05,X05);
+	PIOC->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X05,X05,X3,X05);
+	PIOD->PIO_REHLSR |= WATTR_INTERRUPT_LINES(X05,X05,X05,X3);
 	
 
 #define X4(a,b,c,d,e) d |
 	
 	//Set falling edge interrupts
-	PIOA->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X4,X0,X0,X0);
-	PIOB->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X0,X4,X0,X0);
-	PIOC->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X0,X0,X4,X0);
-	PIOD->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X0,X0,X0,X4);
+	PIOA->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X4,X05,X05,X05);
+	PIOB->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X05,X4,X05,X05);
+	PIOC->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X05,X05,X4,X05);
+	PIOD->PIO_FELLSR |= WATTR_INTERRUPT_LINES(X05,X05,X05,X4);
 	
 
 	return;
@@ -128,24 +141,24 @@ config_pio_irq()
 //number of function pointers based on the contents of the
 //interrupt lines macro. If you can think of a better solution,
 //PLEASE replace this code with your solution.
-static void (*pioa_handlers[]) = {WATTR_INTERRUPT_LINES(X5,X0,X0,X0)};
-static void (*piob_handlers[]) = {WATTR_INTERRUPT_LINES(X0,X5,X0,X0)};
-static void (*pioc_handlers[]) = {WATTR_INTERRUPT_LINES(X0,X0,X5,X0)};
-static void (*pioc_handlers[]) = {WATTR_INTERRUPT_LINES(X0,X0,X0,X5)};
+static void (*pioa_handlers[])(void) = {WATTR_INTERRUPT_LINES(X5,X05,X05,X05)};
+static void (*piob_handlers[])(void) = {WATTR_INTERRUPT_LINES(X05,X5,X05,X05)};
+static void (*pioc_handlers[])(void) = {WATTR_INTERRUPT_LINES(X05,X05,X5,X05)};
+static void (*piod_handlers[])(void) = {WATTR_INTERRUPT_LINES(X05,X05,X05,X5)};
 	
 #define X6(a,b,c,d,e) a,
 
-static uint32_t pioa_masks[] = {WATTR_INTERRUPT_LINES(X6,X0,X0,X0)};
-static uint32_t pioa_masks[] = {WATTR_INTERRUPT_LINES(X0,X6,X0,X0)};
-static uint32_t pioa_masks[] = {WATTR_INTERRUPT_LINES(X0,X0,X6,X0)};
-static uint32_t pioa_masks[] = {WATTR_INTERRUPT_LINES(X0,X0,X0,X6)};
+static uint32_t pioa_masks[] = {WATTR_INTERRUPT_LINES(X6,X05,X05,X05)};
+static uint32_t piob_masks[] = {WATTR_INTERRUPT_LINES(X05,X6,X05,X05)};
+static uint32_t pioc_masks[] = {WATTR_INTERRUPT_LINES(X05,X05,X6,X05)};
+static uint32_t piod_masks[] = {WATTR_INTERRUPT_LINES(X05,X05,X05,X6)};
 
 #define X7(a,b,c,d,e) 1 +
 //determine the number of valid entries for each irq handler vector
-static int pioa_icount = WATTR_INTERRUPT_LINES(X7,X0,X0,X0);
-static int piob_icount = WATTR_INTERRUPT_LINES(X0,X7,X0,X0);
-static int pioc_icount = WATTR_INTERRUPT_LINES(X0,X0,X7,X0);
-static int piod_icount = WATTR_INTERRUPT_LINES(X0,X0,X0,X7);
+static int pioa_icount = WATTR_INTERRUPT_LINES(X7,X05,X05,X05);
+static int piob_icount = WATTR_INTERRUPT_LINES(X05,X7,X05,X05);
+static int pioc_icount = WATTR_INTERRUPT_LINES(X05,X05,X7,X05);
+static int piod_icount = WATTR_INTERRUPT_LINES(X05,X05,X05,X7);
 
 
 void PIOA_Handler()
@@ -154,7 +167,7 @@ void PIOA_Handler()
 	int i = 0;
 	for(;i < pioa_icount;++i){
 		if(mask & pioa_masks[i]){
-			(*pioa_handlers)[i]();
+			pioa_handlers[i]();
 			mask &= ~pioa_masks[i];//Indicate irq handled
 		}
 		if(!mask){
@@ -170,7 +183,7 @@ void PIOB_Handler()
 		int i = 0;
 		for(;i < piob_icount;++i){
 			if(mask & piob_masks[i]){
-				(*piob_handlers)[i]();
+				piob_handlers[i]();
 				mask &= ~piob_masks[i];//Indicate irq handled
 			}
 			if(!mask){
@@ -186,7 +199,7 @@ void PIOC_Handler()
 		int i = 0;
 		for(;i < pioc_icount;++i){
 			if(mask & pioc_masks[i]){
-				(*pioc_handlers)[i]();
+				pioc_handlers[i]();
 				mask &= ~pioc_masks[i];//Indicate irq handled
 			}
 			if(!mask){
@@ -202,7 +215,7 @@ void PIOD_Handler()
 		int i = 0;
 		for(;i < piob_icount;++i){
 			if(mask & piod_masks[i]){
-				(*piod_handlers)[i]();
+				piod_handlers[i]();
 				mask &= ~piod_masks[i];//Indicate irq handled
 			}
 			if(!mask){
@@ -213,42 +226,90 @@ void PIOD_Handler()
 }
 
 //Definitions for the Peripheral controlled lines
-#define X1(a,b,c) a |
-#define X2(a,b,c) b |
-#define X3(a,b,c) c |
+#define X13(a,b,c) a |
+#define X23(a,b,c) b |
+#define X33(a,b,c) c |
 
-wattr_periph_config(void)
+static void wattr_periph_config(void)
 {
 	//Disable PIO control of the peripheral lines
-	PIOA->PIO_PDR |= WATTR_PERIPH_LINES(X1,X0,X0,X0);
-	PIOB->PIO_PDR |= WATTR_PERIPH_LINES(X0,X1,X0,X0);
-	PIOC->PIO_PDR |= WATTR_PERIPH_LINES(X0,X0,X1,X0);
-	PIOD->PIO_PDR |= WATTR_PERIPH_LINES(X0,X0,X0,X1);
+	PIOA->PIO_PDR |= WATTR_PERIPH_LINES(X13,X03,X03,X03);
+	PIOB->PIO_PDR |= WATTR_PERIPH_LINES(X03,X13,X03,X03);
+	PIOC->PIO_PDR |= WATTR_PERIPH_LINES(X03,X03,X13,X03);
+	PIOD->PIO_PDR |= WATTR_PERIPH_LINES(X03,X03,X03,X13);
 	
 	//Enable Peripheral control of the lines
-	PIOA->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X2,X0,X0,X0);
-	PIOA->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X3,X0,X0,X0);
-	PIOB->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X0,X2,X0,X0);
-	PIOB->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X0,X3,X0,X0);
-	PIOC->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X0,X0,X2,X0);
-	PIOC->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X0,X0,X3,X0);
-	PIOD->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X0,X0,X0,X2);
-	PIOD->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X0,X0,X0,X3);
+	PIOA->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X23,X03,X03,X03);
+	PIOA->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X33,X03,X03,X03);
+	PIOB->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X03,X23,X03,X03);
+	PIOB->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X03,X33,X03,X03);
+	PIOC->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X03,X03,X23,X03);
+	PIOC->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X03,X03,X33,X03);
+	PIOD->PIO_ABCDSR[0] = WATTR_PERIPH_LINES(X03,X03,X03,X23);
+	PIOD->PIO_ABCDSR[1] = WATTR_PERIPH_LINES(X03,X03,X03,X33);
 }
 //Configure lines that are used as outputs.
-#define X1(a) a |
-wattr_output_config(void)
+#define X11(a) a |
+static void wattr_output_config(void)
 {
 	//Enable PIO control of lines
-	PIOA->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
-	PIOB->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
-	PIOC->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
-	PIOD->PIO_PER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
+	PIOA->PIO_PER = WATTR_OUTPUT_LINES(X11,X01,X01,X01);
+	PIOB->PIO_PER = WATTR_OUTPUT_LINES(X01,X11,X01,X01);
+	PIOC->PIO_PER = WATTR_OUTPUT_LINES(X01,X01,X11,X01);
+	PIOD->PIO_PER = WATTR_OUTPUT_LINES(X01,X01,X01,X11);
 	
 	//Enable outputs on the lines
-	PIOA->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
-	PIOB->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
-	PIOC->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
-	PIOD->PIO_OER = WATTR_OUTPUT_LINES(X1,X0,X0,X0);
+	PIOA->PIO_OER = WATTR_OUTPUT_LINES(X11,X01,X01,X01);
+	PIOB->PIO_OER = WATTR_OUTPUT_LINES(X01,X11,X01,X01);
+	PIOC->PIO_OER = WATTR_OUTPUT_LINES(X01,X01,X11,X01);
+	PIOD->PIO_OER = WATTR_OUTPUT_LINES(X01,X01,X01,X11);	
+}
+
+void pio_config(void)
+{
+	//Enable the clocks for each PIO controller
+	PMC->PMC_PCER0 = PMC_PCER0_PID9 | PMC_PCER0_PID10 |
+		PMC_PCER0_PID11 | PMC_PCER0_PID12;
+	//Enable all pio interrupts that may be used
+	if(pioa_icount){
+		NVIC_EnableIRQ(PIOA_IRQn);
+	}
+	if(piob_icount){
+		NVIC_EnableIRQ(PIOB_IRQn);
+	}
+	if(pioc_icount){
+		NVIC_EnableIRQ(PIOC_IRQn);
+	}
+	if(piod_icount){
+		NVIC_EnableIRQ(PIOD_IRQn);
+	}
+	wattr_periph_config();
+	wattr_output_config();
+	config_pio_irq();
+}
+
+//Button press handlers - likely outsourced to ATTINY
+void fp_ubutton_handler()
+{
+	
+}
+
+void fp_lbutton_handler()
+{
+	
+}
+
+void fp_rbutton_handler()
+{
+	
+}
+
+void fp_dbutton_handler()
+{
+	
+}
+
+void back_button_handler()
+{
 	
 }

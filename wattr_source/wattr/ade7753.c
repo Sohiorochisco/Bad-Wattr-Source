@@ -1,5 +1,6 @@
 #include "headers/wattr_mem.h"
 #include "headers/ade7753.h"
+#include "sam.h"
 
 /*Static buffer for a single register write*/
 static volatile wbuff *ade_tx_buff;

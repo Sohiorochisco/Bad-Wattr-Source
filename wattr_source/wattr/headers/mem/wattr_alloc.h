@@ -7,14 +7,15 @@
 
 #ifndef WATTR_MEM_ALLOC
 #define WATTR_MEM_ALLOC
+#include "sam.h"
 //Defines the dimensions of the pool of large memory blocks
 #define BIG_BLOCK_WL	256
 #define BIG_BLOCK_NUM	2
 //Define the dimensions of the pool of medium memory blocks
-#define MED_BLOCK_WL	16
+#define MED_BLOCK_WL	32
 #define MED_BLOCK_NUM	32
 //Define the dimensions of the pool of small memory blocks
-#define SML_BLOCK_WL	4
+#define SML_BLOCK_WL	12
 #define SML_BLOCK_NUM	32
 
 
@@ -29,9 +30,9 @@ typedef struct{
 /*Function for allocating wbuffs from the normal memory pools. l should include
  *the space for the length tag at the beginning of the struct.
  */	
-inline wbuff *alloc_wbuff(uint32_t l);
+wbuff *alloc_wbuff(uint32_t l);
 //Function for properly freeing wbuffs
-inline uint32_t free_wbuff(wbuff *buff);
+uint32_t free_wbuff(wbuff *buff);
 
 /*Used to allocate a single block of memory from one of the memory pools. The
  * only valid values for "size" are the values assigned to the macros above.

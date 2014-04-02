@@ -18,7 +18,7 @@ typedef struct{
 }pdc_periph;
 
 /*constructor for ade7753 spi pdc interface*/
-void make_ade7753_driver(pdc_periph *ade);
+//void make_ade7753_driver(pdc_periph *ade);
 
 /*constructor for rs232 uart pdc interface */
 void make_rs232_driver(pdc_periph *rs232);

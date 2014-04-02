@@ -4,7 +4,8 @@
  */
 
 
-#include "headers/mem/wattr_alloc.h"
+#include "headers/wattr_mem.h"
+#include "sam.h"
 
 //static allocation for each of the memory pools
 static char big_pool[BIG_BLOCK_WL * BIG_BLOCK_NUM];
@@ -22,21 +23,27 @@ static void *sml_q_buf[SML_BLOCK_NUM];
 void pools_init()
 {
 	//initialize each memory queue, attach "buff" array
-	init_queue( big_mqueue, &big_q_buf, BIG_BLOCK_NUM);
-	init_queue( med_mqueue, &med_q_buf, MED_BLOCK_NUM);
-	init_queue( sml_mqueue, &sml_q_buf, SML_BLOCK_NUM);
+	init_queue(&big_mqueue, (void*)(&big_q_buf), BIG_BLOCK_NUM);
+	init_queue(&med_mqueue, (void*)(&med_q_buf), MED_BLOCK_NUM);
+	init_queue(&sml_mqueue, (void*)(&sml_q_buf), SML_BLOCK_NUM);
 	//break each up buffer into blocks, add to free memory pointer queues
-	char *i;
-	for(i=big_pool;i < BIG_BLOCK_NUM;i+=BIG_BLOCK_WL){
+	void *i;
+	uint32_t k = 0;
+	for(i=big_pool;k < BIG_BLOCK_NUM;i+=BIG_BLOCK_WL){
 		enqueue(&big_mqueue,i);
+		++k;
 	}
-	for(i=med_pool;i < MED_BLOCK_NUM;i+=MED_BLOCK_WL){
+	k = 0;
+	for(i=med_pool;k < MED_BLOCK_NUM;i+=MED_BLOCK_WL){
 		enqueue(&med_mqueue,i);
+		++k;
 	}
-	for(i=sml_pool;i < BIG_BLOCK_NUM;i+=SML_BlOCK_WL){
+	k = 0;
+	for(i=sml_pool;k < BIG_BLOCK_NUM;i+=SML_BLOCK_WL){
 		enqueue(&sml_mqueue,i);
+		++k;
 	}
-	return 0;
+	return;
 }
 
 void * b_alloc(uint32_t size)
@@ -53,6 +60,7 @@ void * b_alloc(uint32_t size)
 		b = dequeue(&sml_mqueue);
 		break;
 	default:
+		break;
 	}
 	return b;
 }
@@ -76,7 +84,7 @@ uint32_t b_free(void *p, uint32_t size)
 	return e;
 }
 
-inline wbuff *alloc_wbuff(uint32_t l)
+wbuff *alloc_wbuff(uint32_t l)
 {
 	wbuff *b;
 	/*Some checks necessary to ensure that the block size is not too small
@@ -85,16 +93,16 @@ inline wbuff *alloc_wbuff(uint32_t l)
 	if(l > 4){
 		b = (wbuff*)b_alloc(l);
 	}else{
-		b = NULL;
+		b = 0;
 	}
-	if(b != NULL){
+	if(b){
 		b->length = l - 4;
 	}
 	return b;
 }
 
-inline uint32_t free_wbuff(wbuff *buff)
+uint32_t free_wbuff(wbuff *buff)
 {
-	l = 4 + buff->length
+	uint32_t l = 4 + buff->length;
 	return b_free(buff,l);
 }
