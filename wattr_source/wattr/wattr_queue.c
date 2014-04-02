@@ -15,7 +15,7 @@ void init_queue(queue *q,void **buff, uint32_t l)
 	q->length = l;
 	q->buf = buff;
 	q->first = 0;
-	q->last = 1;
+	q->last = 0;
 	return 0;
 }	
 
@@ -29,29 +29,28 @@ static uint32_t wrap(uint32_t i, uint32_t l);
 uint32_t enqueue(queue *q,void *p)
 {
 	uint32_t st;
-	if (q->first == q->last){
+	uint32_t t = wrap(q->first,q->length);
+	if (t == q->last){
 		/*queue overflow */
 		st = 1;
 	}else{
 		q->buf[q->first] = p;
-		q->first = wrap(q->first,q->length);
+		q->first = t;
 	}
 	return 0;
 }
 
 void * dequeue(queue *q)
-{
-	uint32_t t = q->last; 
-	char *p;
-	t = wrap(t, q->length); //Test if the queue is empty
-	if (t != q->first){
-		q->last = t;
+{ 
+	void *p;
+	if (q->last != q->first){
 		p = q->buf[q->last];
+		q->last = wrap(q->last,q->length);
 	}else{
 		/*Queue underflow */
 		p = 0;
 	}
-	return (void*)p;
+	return p;
 }
 
 /*Shifts the specified index to the correct point in the buffer array

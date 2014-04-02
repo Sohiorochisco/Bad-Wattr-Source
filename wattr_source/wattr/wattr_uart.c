@@ -19,9 +19,9 @@
 
 static queue wattr_uart_rx_queue;
 static void *uart_rx_fifo[WATTR_UART_RX_DPTH];
-static wbuff *tx_buff;
-static wbuff *rx_buff1;
-static wbuff *rx_buff2;
+static wbuff *tx_buff = 0;
+static wbuff *rx_buff1 = 0;
+static wbuff *rx_buff2 = 0;
 
 
 
@@ -76,7 +76,7 @@ static wbuff * wattr_usart_read(void)
 
 static uint32_t wattr_usart_write(wbuff *w)
 {
-	uint32_t status = 1;//Generic error code if transmission is unsuccessful
+	uint32_t status = 0;//Generic error code if transmission is unsuccessful
 	UART0->UART_CR |= UART_CR_TXEN;
 	if(UART0->UART_SR & UART_SR_TXRDY){	
 		if(tx_buff){

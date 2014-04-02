@@ -16,7 +16,7 @@
 #define MED_BLOCK_NUM	32
 //Define the dimensions of the pool of small memory blocks
 #define SML_BLOCK_WL	12
-#define SML_BLOCK_NUM	32
+#define SML_BLOCK_NUM	64
 
 
 void pools_init();

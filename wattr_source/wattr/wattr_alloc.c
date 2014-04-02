@@ -16,16 +16,16 @@ static queue big_mqueue;
 static queue med_mqueue;
 static queue sml_mqueue;
 
-static void *big_q_buf[BIG_BLOCK_NUM];
-static void *med_q_buf[MED_BLOCK_NUM];
-static void *sml_q_buf[SML_BLOCK_NUM];
+static void *big_q_buf[BIG_BLOCK_NUM +1];
+static void *med_q_buf[MED_BLOCK_NUM +1];
+static void *sml_q_buf[SML_BLOCK_NUM +1];
 
 void pools_init()
 {
 	//initialize each memory queue, attach "buff" array
-	init_queue(&big_mqueue, (void*)(&big_q_buf), BIG_BLOCK_NUM);
-	init_queue(&med_mqueue, (void*)(&med_q_buf), MED_BLOCK_NUM);
-	init_queue(&sml_mqueue, (void*)(&sml_q_buf), SML_BLOCK_NUM);
+	init_queue(&big_mqueue, (void*)(&big_q_buf), BIG_BLOCK_NUM + 1);
+	init_queue(&med_mqueue, (void*)(&med_q_buf), MED_BLOCK_NUM + 1);
+	init_queue(&sml_mqueue, (void*)(&sml_q_buf), SML_BLOCK_NUM + 1);
 	//break each up buffer into blocks, add to free memory pointer queues
 	void *i;
 	uint32_t k = 0;
@@ -39,7 +39,7 @@ void pools_init()
 		++k;
 	}
 	k = 0;
-	for(i=sml_pool;k < BIG_BLOCK_NUM;i+=SML_BLOCK_WL){
+	for(i=sml_pool;k < SML_BLOCK_NUM;i+=SML_BLOCK_WL){
 		enqueue(&sml_mqueue,i);
 		++k;
 	}
@@ -48,6 +48,7 @@ void pools_init()
 
 void * b_alloc(uint32_t size)
 {
+	NVIC_DisableIRQ(UART0_IRQn);
 	char *b = 0;
 	switch(size){
 	case BIG_BLOCK_WL:
@@ -62,11 +63,13 @@ void * b_alloc(uint32_t size)
 	default:
 		break;
 	}
+	NVIC_EnableIRQ(UART0_IRQn);
 	return b;
 }
 
 uint32_t b_free(void *p, uint32_t size)
 {
+	NVIC_DisableIRQ(UART0_IRQn);
 	uint32_t e = 1;
 	switch(size){
 	case BIG_BLOCK_WL:
@@ -81,6 +84,7 @@ uint32_t b_free(void *p, uint32_t size)
 	default:
 		e = 1;
 	}
+	NVIC_DisableIRQ(UART0_IRQn);
 	return e;
 }
 
