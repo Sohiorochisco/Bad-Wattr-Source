@@ -8,7 +8,6 @@
 #define ONES 0xFFFFFFFF;
 #include "sam.h"
 #include "headers/wattr_mem.h"
-#include "headers/wattr_utils.h"
 #include "headers/pdc_periph.h"
 #include "headers/wattr_pio.h"
 
@@ -28,6 +27,7 @@ int main(void)
 	wbuff *test_word = 0;
 	uint32_t idx = 0;
 	uint32_t blink = ONES;
+	const char test_vect[] = "TESTING";
     while (1) 
     {
 		//blinking power indicator
@@ -39,7 +39,8 @@ int main(void)
 		if(!test_word){
 			test_word = alloc_wbuff(SML_BLOCK_WL);
 			if(test_word){
-				test_word->buff = "TESTING";
+				
+				test_word->buff = (uint32_t *)test_vect;
 			}
 		}
 		if(test_word){

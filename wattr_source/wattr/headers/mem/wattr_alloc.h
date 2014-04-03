@@ -24,7 +24,7 @@ void pools_init();
 /* Struct used as generic "buffer" object, for received data. */
 typedef struct{
 	uint32_t length;
-	void *buff;
+	uint32_t *buff;
 }wbuff;
 
 /*Function for allocating wbuffs from the normal memory pools. l should include

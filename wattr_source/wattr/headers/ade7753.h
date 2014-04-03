@@ -185,9 +185,5 @@ static uint32_t gs_ul_spi_clock = 500000;
 
 
 
-/*Used to generate the byte-stream for writing a data word to one of the registers on
- *the ADE7753
- */
-inline void ade_write_reg(uint32_t w,uint32_t wl, uint8_t addr, uint8_t *buf);
 
 #endif /* ADE7753_H_ */
