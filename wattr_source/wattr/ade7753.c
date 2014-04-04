@@ -6,15 +6,15 @@
 
 //Used to indicate the current type of buffer being transferred
 enum spiwd{
-	IRQ_WRD;
-	ZX_WRD;
-	COM_WRD;
-	NONE;
+	IRQ_WRD,
+	ZX_WRD,
+	COM_WRD,
+	NONE
 	};
 /*Static buffer for a single register write*/
 static wbuff *ade_com_buff;
-const static wbuff ade_zx_buff;
-const static wbuff ade_irq_buff;
+static wbuff ade_zx_buff;
+static wbuff ade_irq_buff;
 /*Pointer to ADE7753 received data buffer */
 static wbuff *ade_rx_buff;
 /*received buffer queue struct*/
@@ -23,17 +23,18 @@ static queue ade_tx_queue;
 static void *rxq_buff[ADE_RXBUFF_DPTH];
 static void *txq_buff[ADE_TXBUFF_DPTH];
 //used to indicate current status 
-struct ade_flags{
+struct ade_fl{
 	uint8_t zx_next;//Indicates zx transfer is requested
 	uint8_t irq_next;//Indicates irq_transfer is requested
 	enum spiwd spiwrd;
 };
+static struct ade_fl ade_flags;
 
 /*Standard write for IRQ interrupt from ADE7753*/
-const uint8_t irq_wr[] = {
+const static uint8_t irq_wr[] = {
 	ADE_REG_AENERGY,0x00,0x00,0x00,ADE_REG_RAENERGY,0x00,0x00,0x00
 };
-const uint8_t zx_wr[] = {
+const static uint8_t zx_wr[] = {
 	ADE_REG_VRMS,0x00,0x00,0x00,ADE_REG_IRMS,0x00,0x00,0x00
 };
 
@@ -57,7 +58,7 @@ static void config_spi(void)
 }
 
 //Begins spi transmission
-static inline spi_transfer_wbuff(wbuff *wbp)
+static inline void spi_transfer_wbuff(wbuff *wbp)
 {
 	PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)wbp->buff);
 	PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(ade_rx_buff->buff));
@@ -105,13 +106,13 @@ static void comms_rxend_handler(void)
 {
 	switch(ade_flags.spiwrd){
 	IRQ_WRD:
-		ade_rx_buff->buff[0] = ade_irq_buff->buff[0];
-		ade_rx_buff->buff[4] = ade_irq_buff->buff[4];
+		ade_rx_buff->buff[0] = ade_irq_buff.buff[0];
+		ade_rx_buff->buff[4] = ade_irq_buff.buff[4];
 		enqueue(&ade_rx_queue,ade_rx_buff);
 		break;
 	ZX_WRD:
-		ade_rx_buff->buff[0] = ade_zx_buff->buff[0];
-		ade_rx_buff->buff[4] = ade_zx_buff->buff[4];
+		ade_rx_buff->buff[0] = ade_zx_buff.buff[0];
+		ade_rx_buff->buff[4] = ade_zx_buff.buff[4];
 		enqueue(&ade_rx_queue,ade_rx_buff);
 		break;
 	COM_WRD:
@@ -147,12 +148,12 @@ void SPI_Handler(void)
 void ade_irq_handler(void)
 {
 	//raise flag indicating irq read pending
-	irq_flag = 0xff;
+	ade_flags.irq_next = 0xff;
 }
 void ade_zx_handler(void)
 {
 	//raise flag indicating zx read pending
-	zx_flag = 0xff;
+	ade_flags.zx_next = 0xff;
 }
 
 void service_ade(void)
@@ -174,7 +175,7 @@ void service_ade(void)
 		ade_flags.spiwrd = tx_wb? COM_WRD: NONE;
 	}
 	if(tx_wb){
-		wbuff rxnext = alloc_wbuff((tx_wb->length) + 4);
+		wbuff *rxnext = alloc_wbuff((tx_wb->length) + 4);
 		if(rxnext){
 			ade_rx_buff = rxnext;
 			spi_transfer_wbuff(tx_wb);

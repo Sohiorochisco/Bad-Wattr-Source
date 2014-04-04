@@ -67,6 +67,11 @@ void * b_alloc(uint32_t size)
 	//Will replace with macro soon
 	NVIC_EnableIRQ(UART0_IRQn);
 	NVIC_EnableIRQ(SPI_IRQn);
+	if(!b){
+		//For debug use only, remove during normal use
+		out_of_mem_assert();
+		//throw out-of-memory assertion
+	}
 	return b;
 }
 

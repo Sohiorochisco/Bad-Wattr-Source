@@ -34,7 +34,6 @@ void uart_endrx_handler()
 	//Push the current block address onto the FIFO
 	uint32_t e = enqueue(&wattr_uart_rx_queue,uart_rx_buff);
 	if(!e){
-		rx_buff1 = rx_buff2;
 		uart_rx_buff = alloc_wbuff(SML_BLOCK_WL);
 	} 
 	if(uart_rx_buff){
@@ -83,29 +82,16 @@ static wbuff * wattr_uart_read(void)
 
 static uint32_t wattr_uart_write(wbuff *w)
 {
-	uint32_t status = 0;//Generic error code if transmission is unsuccessful
-	UART0->UART_CR |= UART_CR_TXEN;
-	if(UART0->UART_SR & UART_SR_TXRDY){	
-		if(tx_buff){
-			status = free_wbuff(tx_buff);
-		}
-		if(!status){
-			tx_buff = w;
-			UART0->UART_TPR = UART_TPR_TXPTR((uint32_t)(tx_buff->buff));
-			//Begins transmission
-			UART0->UART_TCR = UART_TCR_TXCTR(tx_buff->length);
-		}
-	}else{
-		status = 2;// Code for "too soon"...
-	}
-	return status;
+	//Since no interrupts use this queue, re-entrance unnecessary
+	uint32_t st = enqueue(&wattr_uart_tx_queue,w);
+	return st;
 }
 
 void make_rs232_driver(pdc_periph *rs232)
 {
 	config_uart();
-	rs232->read = &wattr_usart_read;
-	rs232->write = &wattr_usart_write;
+	rs232->read = &wattr_uart_read;
+	rs232->write = &wattr_uart_write;
 	return;
 }
 
@@ -122,6 +108,14 @@ void service_uart(void)
 			UART0->UART_TPR = UART_TPR_TXPTR((uint32_t)(uart_tx_buff->buff));
 			//Begins transmission
 			UART0->UART_TCR = UART_TCR_TXCTR(uart_tx_buff->length);	
+		}
+	}
+	if(!uart_rx_buff){
+		wbuff *rx_wb = alloc_wbuff(SML_BLOCK_WL);
+		if(rx_wb){
+			uart_rx_buff = rx_wb;
+			UART0->UART_RPR = UART_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
+			UART0->UART_RCR = UART_RCR_RXCTR(uart_rx_buff->length);			
 		}
 	}
 }
