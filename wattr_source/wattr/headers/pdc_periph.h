@@ -25,4 +25,6 @@ void make_rs232_driver(pdc_periph *rs232);
 
 void make_ade7753_driver(pdc_periph *ade_driver);
 
+void service_ade(void);
+
 #endif

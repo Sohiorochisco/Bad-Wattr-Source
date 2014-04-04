@@ -49,6 +49,7 @@ void pools_init()
 void * b_alloc(uint32_t size)
 {
 	NVIC_DisableIRQ(UART0_IRQn);
+	NVIC_DisableIRQ(SPI_IRQn);
 	char *b = 0;
 	switch(size){
 	case BIG_BLOCK_WL:
@@ -63,13 +64,16 @@ void * b_alloc(uint32_t size)
 	default:
 		break;
 	}
+	//Will replace with macro soon
 	NVIC_EnableIRQ(UART0_IRQn);
+	NVIC_EnableIRQ(SPI_IRQn);
 	return b;
 }
 
 uint32_t b_free(void *p, uint32_t size)
 {
 	NVIC_DisableIRQ(UART0_IRQn);
+	NVIC_DisableIRQ(SPI_IRQn);
 	uint32_t e = 1;
 	switch(size){
 	case BIG_BLOCK_WL:
@@ -84,7 +88,8 @@ uint32_t b_free(void *p, uint32_t size)
 	default:
 		e = 1;
 	}
-	NVIC_DisableIRQ(UART0_IRQn);
+	NVIC_EnableIRQ(UART0_IRQn);
+	NVIC_EnableIRQ(SPI_IRQn);
 	return e;
 }
 

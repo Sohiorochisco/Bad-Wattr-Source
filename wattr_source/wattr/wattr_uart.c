@@ -10,7 +10,7 @@
 /////////UART SPECIFIC DEFINES///////////////////
 #define WATTR_UART_BAUD 0x2860 //9600 baud
 #define WATTR_UART_RX_DPTH 0x4
-
+#define WATTR_UART_TX_DPTH 0x3
 
 
 
@@ -18,53 +18,59 @@
 
 
 static queue wattr_uart_rx_queue;
+static queue wattr_uart_tx_queue;
+static wbuff *uart_tx_buff = 0;
+static wbuff *uart_rx_buff = 0;
 static void *uart_rx_fifo[WATTR_UART_RX_DPTH];
-static wbuff *tx_buff = 0;
-static wbuff *rx_buff1 = 0;
-static wbuff *rx_buff2 = 0;
+static void *uart_tx_fifo[WATTR_UART_TX_DPTH];
 
 
 
 #define UART_SET_BAUD(baud) \
-UART_BRGR_CD((1/baud))
+UART_BRGR_CD((uint32_t)(1/baud))
 
 void uart_endrx_handler()
 {
 	//Push the current block address onto the FIFO
-	uint32_t e = enqueue(&wattr_uart_rx_queue,rx_buff1);
+	uint32_t e = enqueue(&wattr_uart_rx_queue,uart_rx_buff);
 	if(!e){
 		rx_buff1 = rx_buff2;
-		rx_buff2 = alloc_wbuff(SML_BLOCK_WL);
+		uart_rx_buff = alloc_wbuff(SML_BLOCK_WL);
 	} 
-	while(UART0->UART_RNCR){}//Just to ensure that buffers are transfered properly.
-	UART0->UART_RNPR = UART_RNPR_RXNPTR((uint32_t)(rx_buff2->buff));
-	UART0->UART_RNCR = UART_RNCR_RXNCTR(rx_buff2->length);
+	if(uart_rx_buff){
+		UART0->UART_RPR = UART_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
+		UART0->UART_RCR = UART_RCR_RXCTR(uart_rx_buff->length);
+	}
 	return;
 }
 //Perform initial setup of the UART module
 static void config_uart(void)
 {
+	//Initialize static memory structures
+	init_queue(&wattr_uart_rx_queue,uart_rx_fifo,
+		WATTR_UART_RX_DPTH);
+	init_queue(&wattr_uart_tx_queue,uart_tx_fifo,
+		WATTR_UART_TX_DPTH);
 	//Enable the clock using the power management controller
 	PMC->PMC_PCER0 = PMC_PCER0_PID7;
 	//Unmask the UART0 interrupt in the NVIC
 	NVIC_EnableIRQ(UART0_IRQn);
+	//Reset and disable UART0
+	UART0->UART_CR = UART_CR_RSTTX | UART_CR_RSTTX |
+		UART_CR_TXDIS | UART_CR_RXDIS | UART_CR_RSTSTA; 
 	//Find correct divider value to generate baud-rate.
-	uint32_t baud_div = (uint32_t)((SystemCoreClock/WATTR_UART_BAUD)>>4);
+	int baud_div = ((SystemCoreClock/WATTR_UART_BAUD)>>4);
 	UART0->UART_BRGR |= UART_SET_BAUD(baud_div);
-	//Reset transmitter and receiver
-	UART0->UART_CR |= UART_CR_RSTTX | UART_CR_RSTTX;
 	//Set the UART mode to Normal, with no parity bit 
 	UART0->UART_MR |= UART_MR_CHMODE_NORMAL | UART_MR_PAR_NO;
 	//Enable interrupt for end of receive transfer
 	UART0->UART_IER = UART_IER_ENDRX;
-	init_queue(&wattr_uart_rx_queue,uart_rx_fifo,
-		WATTR_UART_RX_DPTH);
-	rx_buff1 = alloc_wbuff(SML_BLOCK_WL);
-	rx_buff2 = alloc_wbuff(SML_BLOCK_WL);
+	//Enable transmitter and receiver
+	UART0->UART_CR |= UART_CR_TXEN | UART_CR_RXEN;
 	return;
 }
 
-static wbuff * wattr_usart_read(void)
+static wbuff * wattr_uart_read(void)
 {
 	//Temporarily disable the interrupt which acts on the 
 	//FIFO buffer from the other end.
@@ -74,7 +80,8 @@ static wbuff * wattr_usart_read(void)
 	return buff;
 }
 
-static uint32_t wattr_usart_write(wbuff *w)
+
+static uint32_t wattr_uart_write(wbuff *w)
 {
 	uint32_t status = 0;//Generic error code if transmission is unsuccessful
 	UART0->UART_CR |= UART_CR_TXEN;
@@ -102,6 +109,22 @@ void make_rs232_driver(pdc_periph *rs232)
 	return;
 }
 
+void service_uart(void)
+{
+	//Only service if the TX PDC channel is inactive
+	if(UART0->UART_SR & UART_SR_TXBUFE){
+		if(uart_tx_buff){
+			free_wbuff(uart_tx_buff);
+		}
+		wbuff *tx_wb = dequeue(&wattr_uart_tx_queue); //wbuff to transmit
+		if(tx_wb){
+			uart_tx_buff = tx_wb;
+			UART0->UART_TPR = UART_TPR_TXPTR((uint32_t)(uart_tx_buff->buff));
+			//Begins transmission
+			UART0->UART_TCR = UART_TCR_TXCTR(uart_tx_buff->length);	
+		}
+	}
+}
 void UART0_Handler()
 {
 	if(UART0->UART_SR & UART_SR_ENDRX){

@@ -102,20 +102,39 @@ void make_ade7753_driver(pdc_periph *ade_driver)
 
 //Handler for reloading the dynamic memory access controller, and processing reads
 static void comms_rxend_handler(void)
-{	
-
-	if(!(orx->buff[0] | ADE_WRITE_MASK)){
-		uint32_t i = 0;
-		for(; i < ade_rx_buff->length;i+=4){
-			//combine the register addresses with contents 
-			orx->buff[i] |= (otx->buff[i]);
-		}
+{
+	switch(ade_flags.spiwrd){
+	IRQ_WRD:
+		ade_rx_buff->buff[0] = ade_irq_buff->buff[0];
+		ade_rx_buff->buff[4] = ade_irq_buff->buff[4];
 		enqueue(&ade_rx_queue,ade_rx_buff);
-	}else{
-		free_wbuff(orx);
+		break;
+	ZX_WRD:
+		ade_rx_buff->buff[0] = ade_zx_buff->buff[0];
+		ade_rx_buff->buff[4] = ade_zx_buff->buff[4];
+		enqueue(&ade_rx_queue,ade_rx_buff);
+		break;
+	COM_WRD:
+		if(ade_com_buff){
+			if(!(ade_com_buff->buff[0] | ADE_WRITE_MASK)){
+				uint32_t i = 0;
+				for(; i < ade_rx_buff->length;i+=4){
+					//combine the register addresses with contents
+					ade_rx_buff->buff[i] |= (ade_com_buff->buff[i]);
+				}
+			}else{
+				free_wbuff(ade_rx_buff);
+			}
+			free_wbuff(ade_com_buff);
+			ade_com_buff = 0;
+		}
+		break;
+	NONE: break;
+	default: break;
 	}
-	free_wbuff(otx);
-	return;
+	ade_rx_buff = 0;
+	ade_flags.spiwrd = NONE;
+	return;		
 }
 
 void SPI_Handler(void)
@@ -136,25 +155,27 @@ void ade_zx_handler(void)
 	zx_flag = 0xff;
 }
 
-int service_ade(void)
+void service_ade(void)
 {
 	wbuff *tx_wb = 0; //wbuff to transmit
-	if(SPI.SPI_SR & SPI_SR_ENDTX){
+	if(SPI->SPI_SR & SPI_SR_ENDTX){
 		//Don't do anything (last transfer hasn't finished yet)
 	}else if(ade_flags.zx_next){ //check zx and irq flags first
 		ade_flags.zx_next = 0;
 		tx_wb = &ade_zx_buff;
+		ade_flags.spiwrd = ZX_WRD;
 	}else if(ade_flags.irq_next){
 		ade_flags.irq_next = 0;
 		tx_wb = &ade_irq_buff;
+		ade_flags.spiwrd = IRQ_WRD;
 	}else{
 		//Finally, see if there is a pending com write
 		tx_wb = dequeue(&ade_tx_queue);
+		ade_flags.spiwrd = tx_wb? COM_WRD: NONE;
 	}
 	if(tx_wb){
 		wbuff rxnext = alloc_wbuff((tx_wb->length) + 4);
 		if(rxnext){
-			free_wbuff(ade_rx_buff);
 			ade_rx_buff = rxnext;
 			spi_transfer_wbuff(tx_wb);
 		}
