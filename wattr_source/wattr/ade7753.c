@@ -4,15 +4,17 @@
 #include "headers/wattr_pio.h"
 #include "headers/pdc_periph.h"
 
-#define SPI_TRANSFER_WBUFF(WBUFF_POINTER)\
-	do{\
-			PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)WBUFF_POINTER->buff);\
-			PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));\
-			PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(WBUFF_POINTER->length);\
-			PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(WBUFF_POINTER->length);\
-	} while (0)
+//Used to indicate the current type of buffer being transferred
+enum spiwd{
+	IRQ_WRD;
+	ZX_WRD;
+	COM_WRD;
+	NONE;
+	};
 /*Static buffer for a single register write*/
-static wbuff *ade_tx_buff;
+static wbuff *ade_com_buff;
+const static wbuff ade_zx_buff;
+const static wbuff ade_irq_buff;
 /*Pointer to ADE7753 received data buffer */
 static wbuff *ade_rx_buff;
 /*received buffer queue struct*/
@@ -24,9 +26,7 @@ static void *txq_buff[ADE_TXBUFF_DPTH];
 struct ade_flags{
 	uint8_t zx_next;//Indicates zx transfer is requested
 	uint8_t irq_next;//Indicates irq_transfer is requested
-	uint8_t zx_pending; //Indicates zx transfer in process
-	uint8_t irq_pending; //Indicates irq transfer in process
-	uint8_t com_pending; //Indicates coms transfer in process
+	enum spiwd spiwrd;
 };
 
 /*Standard write for IRQ interrupt from ADE7753*/
@@ -40,12 +40,6 @@ const uint8_t zx_wr[] = {
 
 static void config_spi(void)
 {
-	//Set all flags to zero (because you never know...)
-	ade_flags.com_pending = 0;
-	ade_flags.irq_next = 0;
-	ade_flags.irq_pending = 0;
-	ade_flags.zx_next = 0;
-	ade_flags.zx_pending 0;
 	//Enable the SPI top-level interrupt in the NVIC
 	NVIC_EnableIRQ(SPI_IRQn);
 	//Enable the specific interrupts used by the driver
@@ -60,6 +54,15 @@ static void config_spi(void)
 	//Ensure that the chip select will stay selected between words
 	SPI->SPI_CSR[0] |= SPI_CSR_CSAAT;
 	return;
+}
+
+//Begins spi transmission
+static inline spi_transfer_wbuff(wbuff *wbp)
+{
+	PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)wbp->buff);
+	PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(ade_rx_buff->buff));
+	PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(wbp->length);
+	PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(wbp->length);
 }
 
 wbuff *ade_read(void)
@@ -83,6 +86,12 @@ uint32_t ade_write(wbuff *wrd)
 
 void make_ade7753_driver(pdc_periph *ade_driver)
 {
+	ade_zx_buff.buff = zx_wr;
+	ade_irq_buff.buff = irq_wr;
+	//Set all flags to zero (because you never know...)
+	ade_flags.irq_next = 0;
+	ade_flags.spiwrd = NONE;
+	ade_flags.zx_next = 0;
 	init_queue(&ade_rx_queue,rxq_buff,ADE_RXBUFF_DPTH);
 	init_queue(&ade_tx_queue,txq_buff,ADE_TXBUFF_DPTH);
 	config_spi();
@@ -94,60 +103,7 @@ void make_ade7753_driver(pdc_periph *ade_driver)
 //Handler for reloading the dynamic memory access controller, and processing reads
 static void comms_rxend_handler(void)
 {	
-	wbuff *orx = ade_rx_buff;
-	wbuff *otx = ade_tx_buff;
-	wbuff *rxnext;
-	if(zx_flag){
-		zx_flag = 0;
-		rxnext = alloc_wbuff(SML_BLOCK_WL);
-		//Begin transmission
-		if(rxnext){
-			PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)zx_wr);
-			PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));
-			PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(SML_BLOCK_WL);
-			PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(SML_BLOCK_WL);
-			ade_rx_buff = rxnext;
-		}else{
-			//throw out of memory assertion
-			out_of_mem_assert();
-			ade_rx_buff = 0;
-		}
-	}else if(irq_flag){
-		irq_flag = 0;
-		rxnext = alloc_wbuff(SML_BLOCK_WL);
-		//Begin transmission
-		if(rxnext){
-			PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)irq_wr);
-			PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));
-			PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(SML_BLOCK_WL);
-			PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(SML_BLOCK_WL);
-			ade_rx_buff = rxnext;
-		}else{
-			//throw out of memory assertion
-			out_of_mem_assert();
-			ade_rx_buff = 0;
-		}	
-	}else{
-		rxnext = alloc_wbuff((txnext->length) + 4);
-		if(rxnext){
-			wbuff *txnext = dequeue(&ade_tx_queue);
-			if(txnext){
-				PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)irq_wr);
-				PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));
-				PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(SML_BLOCK_WL);
-				PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(SML_BLOCK_WL);
-				ade_rx_buff = rxnext;
-				ade_tx_buff = txnext;			
-			}else{
-				//if there is no queued word to transmit, set buffer to null
-				ade_tx_buff = 0;
-			}
-		}else{
-			//throw out of memory assertion
-			out_of_mem_assert();
-			ade_rx_buff = 0;
-		}
-	}
+
 	if(!(orx->buff[0] | ADE_WRITE_MASK)){
 		uint32_t i = 0;
 		for(; i < ade_rx_buff->length;i+=4){
@@ -182,60 +138,26 @@ void ade_zx_handler(void)
 
 int service_ade(void)
 {
+	wbuff *tx_wb = 0; //wbuff to transmit
 	if(SPI.SPI_SR & SPI_SR_ENDTX){
 		//Don't do anything (last transfer hasn't finished yet)
-	}else
-	//check zx and irq flags first
-	if(ade_flags.zx_next){
+	}else if(ade_flags.zx_next){ //check zx and irq flags first
 		ade_flags.zx_next = 0;
-		rxnext = alloc_wbuff(SML_BLOCK_WL);
-		//Begin transmission
-		if(rxnext){
-			ade_flags.zx_pending = 0xff;
-			PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)zx_wr);
-			PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));
-			PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(SML_BLOCK_WL);
-			PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(SML_BLOCK_WL);
-		}else{
-			//throw out of memory assertion
-			out_of_mem_assert();
-			ade_rx_buff = 0;
-		}
+		tx_wb = &ade_zx_buff;
 	}else if(ade_flags.irq_next){
 		ade_flags.irq_next = 0;
-		rxnext = alloc_wbuff(SML_BLOCK_WL);
-		//Begin transmission
-		if(rxnext){
-			ade_flags.irq_pending;
-			PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)irq_wr);
-			PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));
-			PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(SML_BLOCK_WL);
-			PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(SML_BLOCK_WL);
-			ade_rx_buff = rxnext;
-		}else{
-				//throw out of memory assertion
-				out_of_mem_assert();
-				ade_rx_buff = 0;
-		}
+		tx_wb = &ade_irq_buff;
 	}else{
-		rxnext = alloc_wbuff((txnext->length) + 4);
+		//Finally, see if there is a pending com write
+		tx_wb = dequeue(&ade_tx_queue);
+	}
+	if(tx_wb){
+		wbuff rxnext = alloc_wbuff((tx_wb->length) + 4);
 		if(rxnext){
-			wbuff *txnext = dequeue(&ade_tx_queue);
-			if(txnext){
-				PDC_SPI->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)irq_wr);
-				PDC_SPI->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(rxnext->buff));
-				PDC_SPI->PERIPH_TCR = PERIPH_TCR_TXCTR(SML_BLOCK_WL);
-				PDC_SPI->PERIPH_RCR = PERIPH_RCR_RXCTR(SML_BLOCK_WL);
-				ade_rx_buff = rxnext;
-				ade_tx_buff = txnext;
-				}else{
-				//if there is no queued word to transmit, set buffer to null
-				ade_tx_buff = 0;
-			}
-			}else{
-			//throw out of memory assertion
-			out_of_mem_assert();
-			ade_rx_buff = 0;
+			free_wbuff(ade_rx_buff);
+			ade_rx_buff = rxnext;
+			spi_transfer_wbuff(tx_wb);
 		}
 	}
+	return;
 }
