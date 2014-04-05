@@ -17,6 +17,8 @@
 //Define the dimensions of the pool of small memory blocks
 #define SML_BLOCK_WL	12
 #define SML_BLOCK_NUM	64
+#define TNY_BLOCK_WL	8
+#define TNY_BLOCK_NUM	64
 
 
 void pools_init();
@@ -46,5 +48,9 @@ void * b_alloc(uint32_t size);
  *  that the memory does not belong to the pool to which it is being returned.
  */
 uint32_t b_free(void *p, uint32_t size);
+
+//Used only in debugging to determine the difference between free anc alloc 
+//call counts
+uint32_t get_leak_count(void);
 
 #endif

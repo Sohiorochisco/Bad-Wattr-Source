@@ -12,7 +12,17 @@
 #include "headers/wattr_pio.h"
 
 pdc_periph wattr_uart;
+pdc_periph wattr_spi;
 
+void wattr_strcpy(uint8_t *buff, char *str)
+{
+	int i = 0;
+	for(;str[i] != 0x00;++i){
+		buff[i] = str[i];
+	}
+	buff[i++] = 0x00;
+	return;
+}
 
 int main(void)
 {
@@ -24,10 +34,11 @@ int main(void)
 	pio_config();
 	//Initialize UART driver structures, implement API
 	make_rs232_driver(&wattr_uart);
-	wbuff *test_word = 0;
+	make_ade7753_driver(&wattr_spi);
+	
 	uint32_t idx = 0;
 	uint32_t blink = ONES;
-	const char test_vect[] = "TESTING";
+	char test_vect[] = "TESTING";
     while (1) 
     {
 		//blinking power indicator
@@ -36,23 +47,21 @@ int main(void)
 			blink = ~blink;
 			PIOD->PIO_ODSR = blink & PIO_ODSR_P20 & ~(PIO_ODSR_P21);
 		}
-		if(!test_word){
-			test_word = alloc_wbuff(SML_BLOCK_WL);
-			if(test_word){
-				
-				test_word->buff = (uint32_t *)test_vect;
-			}
-		}
+		//Test the UART tx code
+		wbuff *test_word = alloc_wbuff(SML_BLOCK_WL);
 		if(test_word){
-			uint32_t failw = wattr_uart.write(test_word);
-			if(failw == 2){
-				PIOD->PIO_ODSR |= PIO_ODSR_P21;
-			}else if(!failw){
+			wattr_strcpy(test_word->buff,test_vect);
+			uint32_t st = wattr_uart.write(test_word);
+			if(st){
+				free_wbuff(test_word);
 				test_word = 0;
 			}
 		}
+		service_ade();
+		service_uart();
 		//Service watchdog timer
 		WDT->WDT_CR = WDT_CR_KEY_PASSWD | WDT_CR_WDRSTT;
 		++idx;
     }
 }
+

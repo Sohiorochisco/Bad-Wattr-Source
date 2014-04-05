@@ -10,7 +10,7 @@
 /////////UART SPECIFIC DEFINES///////////////////
 #define WATTR_UART_BAUD 0x2860 //9600 baud
 #define WATTR_UART_RX_DPTH 0x4
-#define WATTR_UART_TX_DPTH 0x3
+#define WATTR_UART_TX_DPTH 0x2
 
 
 
@@ -29,7 +29,7 @@ static void *uart_tx_fifo[WATTR_UART_TX_DPTH];
 #define UART_SET_BAUD(baud) \
 UART_BRGR_CD((uint32_t)(1/baud))
 
-void uart_endrx_handler()
+void uart_endrx_handler(void)
 {
 	//Push the current block address onto the FIFO
 	uint32_t e = enqueue(&wattr_uart_rx_queue,uart_rx_buff);
@@ -98,16 +98,18 @@ void make_rs232_driver(pdc_periph *rs232)
 void service_uart(void)
 {
 	//Only service if the TX PDC channel is inactive
-	if(UART0->UART_SR & UART_SR_TXBUFE){
+	if(UART0->UART_SR & UART_SR_TXRDY){
 		if(uart_tx_buff){
 			free_wbuff(uart_tx_buff);
+			uart_tx_buff = 0;
 		}
 		wbuff *tx_wb = dequeue(&wattr_uart_tx_queue); //wbuff to transmit
 		if(tx_wb){
 			uart_tx_buff = tx_wb;
 			UART0->UART_TPR = UART_TPR_TXPTR((uint32_t)(uart_tx_buff->buff));
 			//Begins transmission
-			UART0->UART_TCR = UART_TCR_TXCTR(uart_tx_buff->length);	
+			UART0->UART_TCR = UART_TCR_TXCTR(uart_tx_buff->length);
+			UART0->UART_CR = UART_CR_TXEN;
 		}
 	}
 	if(!uart_rx_buff){
@@ -118,8 +120,9 @@ void service_uart(void)
 			UART0->UART_RCR = UART_RCR_RXCTR(uart_rx_buff->length);			
 		}
 	}
+	return;
 }
-void UART0_Handler()
+void UART0_Handler(void)
 {
 	if(UART0->UART_SR & UART_SR_ENDRX){
 		uart_endrx_handler();	

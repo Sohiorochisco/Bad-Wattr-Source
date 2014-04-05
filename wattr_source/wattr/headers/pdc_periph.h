@@ -27,4 +27,6 @@ void make_ade7753_driver(pdc_periph *ade_driver);
 
 void service_ade(void);
 
+void service_uart(void);
+
 #endif

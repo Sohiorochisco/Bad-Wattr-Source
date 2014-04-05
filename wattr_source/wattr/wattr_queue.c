@@ -16,7 +16,7 @@ void init_queue(queue *q,void **buff, uint32_t l)
 	q->buf = buff;
 	q->first = 0;
 	q->last = 0;
-	return 0;
+	return;
 }	
 
 
@@ -28,7 +28,7 @@ static uint32_t wrap(uint32_t i, uint32_t l);
  */ 
 uint32_t enqueue(queue *q,void *p)
 {
-	uint32_t st;
+	uint32_t st = 2;
 	uint32_t t = wrap(q->first,q->length);
 	if (t == q->last){
 		/*queue overflow */
@@ -36,8 +36,9 @@ uint32_t enqueue(queue *q,void *p)
 	}else{
 		q->buf[q->first] = p;
 		q->first = t;
+		st = 0;
 	}
-	return 0;
+	return st;
 }
 
 void * dequeue(queue *q)

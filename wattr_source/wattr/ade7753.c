@@ -11,10 +11,7 @@ enum spiwd{
 	COM_WRD,
 	NONE
 	};
-/*Static buffer for a single register write*/
-static wbuff *ade_com_buff;
-static wbuff ade_zx_buff;
-static wbuff ade_irq_buff;
+
 /*Pointer to ADE7753 received data buffer */
 static wbuff *ade_rx_buff;
 /*received buffer queue struct*/
@@ -22,6 +19,7 @@ static queue ade_rx_queue;
 static queue ade_tx_queue;
 static void *rxq_buff[ADE_RXBUFF_DPTH];
 static void *txq_buff[ADE_TXBUFF_DPTH];
+
 //used to indicate current status 
 struct ade_fl{
 	uint8_t zx_next;//Indicates zx transfer is requested
@@ -31,13 +29,17 @@ struct ade_fl{
 static struct ade_fl ade_flags;
 
 /*Standard write for IRQ interrupt from ADE7753*/
-const static uint8_t irq_wr[] = {
+static uint8_t irq_wr[] = {
 	ADE_REG_AENERGY,0x00,0x00,0x00,ADE_REG_RAENERGY,0x00,0x00,0x00
 };
-const static uint8_t zx_wr[] = {
+static uint8_t zx_wr[] = {
 	ADE_REG_VRMS,0x00,0x00,0x00,ADE_REG_IRMS,0x00,0x00,0x00
 };
 
+/*Static buffer for a single register write*/
+static wbuff *ade_com_buff;
+static wbuff ade_zx_buff;
+static wbuff ade_irq_buff;
 
 static void config_spi(void)
 {
@@ -88,7 +90,9 @@ uint32_t ade_write(wbuff *wrd)
 void make_ade7753_driver(pdc_periph *ade_driver)
 {
 	ade_zx_buff.buff = zx_wr;
+	ade_zx_buff.length = TNY_BLOCK_WL;
 	ade_irq_buff.buff = irq_wr;
+	ade_irq_buff.length = TNY_BLOCK_WL;
 	//Set all flags to zero (because you never know...)
 	ade_flags.irq_next = 0;
 	ade_flags.spiwrd = NONE;
@@ -105,17 +109,17 @@ void make_ade7753_driver(pdc_periph *ade_driver)
 static void comms_rxend_handler(void)
 {
 	switch(ade_flags.spiwrd){
-	IRQ_WRD:
+	case IRQ_WRD:
 		ade_rx_buff->buff[0] = ade_irq_buff.buff[0];
 		ade_rx_buff->buff[4] = ade_irq_buff.buff[4];
 		enqueue(&ade_rx_queue,ade_rx_buff);
 		break;
-	ZX_WRD:
+	case ZX_WRD:
 		ade_rx_buff->buff[0] = ade_zx_buff.buff[0];
 		ade_rx_buff->buff[4] = ade_zx_buff.buff[4];
 		enqueue(&ade_rx_queue,ade_rx_buff);
 		break;
-	COM_WRD:
+	case COM_WRD:
 		if(ade_com_buff){
 			if(!(ade_com_buff->buff[0] | ADE_WRITE_MASK)){
 				uint32_t i = 0;
@@ -130,7 +134,7 @@ static void comms_rxend_handler(void)
 			ade_com_buff = 0;
 		}
 		break;
-	NONE: break;
+	case NONE: break;
 	default: break;
 	}
 	ade_rx_buff = 0;
@@ -175,7 +179,7 @@ void service_ade(void)
 		ade_flags.spiwrd = tx_wb? COM_WRD: NONE;
 	}
 	if(tx_wb){
-		wbuff *rxnext = alloc_wbuff((tx_wb->length) + 4);
+		wbuff *rxnext = alloc_wbuff(tx_wb->length);
 		if(rxnext){
 			ade_rx_buff = rxnext;
 			spi_transfer_wbuff(tx_wb);

@@ -10,5 +10,9 @@ uint32_t init_ADE7753(void);
 
 uint32_t init_serial(void);
 
+void service_ade(void);
+
+void service_uart(void);
+
 
 #endif
