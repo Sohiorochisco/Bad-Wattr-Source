@@ -43,8 +43,6 @@ static wbuff ade_irq_buff;
 
 static void config_spi(void)
 {
-	//Enable the SPI top-level interrupt in the NVIC
-	NVIC_EnableIRQ(SPI_IRQn);
 	//Enable the specific interrupts used by the driver
 	SPI->SPI_IER = SPI_IER_ENDRX;
 	//reset the channel
@@ -56,6 +54,8 @@ static void config_spi(void)
 	SPI->SPI_CSR[0] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA);
 	//Ensure that the chip select will stay selected between words
 	SPI->SPI_CSR[0] |= SPI_CSR_CSAAT;
+	//Enable the SPI top-level interrupt in the NVIC
+	NVIC_EnableIRQ(SPI_IRQn);
 	return;
 }
 
@@ -163,7 +163,7 @@ void ade_zx_handler(void)
 void service_ade(void)
 {
 	wbuff *tx_wb = 0; //wbuff to transmit
-	if(SPI->SPI_SR & SPI_SR_ENDTX){
+	if(!(SPI->SPI_SR & SPI_SR_TXBUFE)){
 		//Don't do anything (last transfer hasn't finished yet)
 	}else if(ade_flags.zx_next){ //check zx and irq flags first
 		ade_flags.zx_next = 0;

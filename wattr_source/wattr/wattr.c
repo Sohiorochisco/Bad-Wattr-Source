@@ -14,7 +14,8 @@
 pdc_periph wattr_uart;
 pdc_periph wattr_spi;
 
-void wattr_strcpy(uint8_t *buff, char *str)
+static volatile uint32_t test_lock = 0;
+void wattr_strcpy(uint8_t *buff, uint8_t *str)
 {
 	int i = 0;
 	for(;str[i] != 0x00;++i){
@@ -38,30 +39,19 @@ int main(void)
 	
 	uint32_t idx = 0;
 	uint32_t blink = ONES;
-	char test_vect[] = "TESTING";
+	wbuff *test_word = 0;
     while (1) 
     {
-		//blinking power indicator
-		if(idx == 0x00080000){
-			idx = 0;
-			blink = ~blink;
-			PIOD->PIO_ODSR = blink & PIO_ODSR_P20 & ~(PIO_ODSR_P21);
-		}
-		//Test the UART tx code
-		wbuff *test_word = alloc_wbuff(SML_BLOCK_WL);
+		blink = ~blink;
+		PIOD->PIO_ODSR = blink & PIO_ODSR_P20 & ~(PIO_ODSR_P21);
+		test_word = wattr_uart.read();
 		if(test_word){
-			wattr_strcpy(test_word->buff,test_vect);
-			uint32_t st = wattr_uart.write(test_word);
-			if(st){
-				free_wbuff(test_word);
-				test_word = 0;
-			}
+			wattr_uart.write(test_word);
 		}
 		service_ade();
 		service_uart();
 		//Service watchdog timer
 		WDT->WDT_CR = WDT_CR_KEY_PASSWD | WDT_CR_WDRSTT;
-		++idx;
     }
 }
 

@@ -24,7 +24,9 @@ static void *sml_q_buf[SML_BLOCK_NUM + 1];
 static void *tny_q_buf[TNY_BLOCK_NUM + 1];
 
 
-static uint32_t leak_count;
+volatile static uint32_t leak_count_sml;
+volatile static uint32_t leak_count_tny;
+volatile static uint32_t leak_count_wbuff;
 
 void pools_init()
 {
@@ -60,7 +62,6 @@ void pools_init()
 
 void * b_alloc(uint32_t size)
 {
-	leak_count++;
 	NVIC_DisableIRQ(UART0_IRQn);
 	NVIC_DisableIRQ(SPI_IRQn);
 	char *b = 0;
@@ -72,9 +73,11 @@ void * b_alloc(uint32_t size)
 		b = dequeue(&med_mqueue);
 		break;
 	case SML_BLOCK_WL:
+		++leak_count_sml;
 		b = dequeue(&sml_mqueue);
 		break;
 	case TNY_BLOCK_WL:
+		++leak_count_tny;
 		b = dequeue(&tny_mqueue);
 		break;
 	default:
@@ -93,7 +96,6 @@ void * b_alloc(uint32_t size)
 
 uint32_t b_free(void *p, uint32_t size)
 {
-	leak_count--;
 	NVIC_DisableIRQ(UART0_IRQn);
 	NVIC_DisableIRQ(SPI_IRQn);
 	uint32_t e = 1;
@@ -105,9 +107,11 @@ uint32_t b_free(void *p, uint32_t size)
 		e = enqueue(&med_mqueue, p);
 		break;
 	case SML_BLOCK_WL:
+		--leak_count_sml;
 		e = enqueue(&sml_mqueue, p);
 		break;
 	case TNY_BLOCK_WL:
+		--leak_count_tny;
 		e = enqueue(&sml_mqueue, p);
 		break;
 	default:
@@ -120,6 +124,7 @@ uint32_t b_free(void *p, uint32_t size)
 
 wbuff *alloc_wbuff(uint32_t l)
 {
+	++leak_count_wbuff;
 	wbuff *b;
 	/*Some checks necessary to ensure that the block size is not too small
 	 *for the minimal wbuff
@@ -138,13 +143,15 @@ wbuff *alloc_wbuff(uint32_t l)
 
 uint32_t free_wbuff(wbuff *oldbuff)
 {
+	--leak_count_wbuff;
 	uint32_t l = oldbuff->length;
 	uint32_t st = b_free(oldbuff->buff,l);
-	return b_free(oldbuff,TNY_BLOCK_WL) + st;
+	st += b_free(oldbuff,TNY_BLOCK_WL);
+	return st;
 }
 
 
 uint32_t get_leak_count(void)
 {
-	return leak_count;
+	return leak_count_tny + leak_count_sml +leak_count_wbuff;
 }

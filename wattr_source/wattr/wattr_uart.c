@@ -8,7 +8,7 @@
 #include "headers/pdc_periph.h"
 #include "headers/wattr_mem.h"
 /////////UART SPECIFIC DEFINES///////////////////
-#define WATTR_UART_BAUD 0x2860 //9600 baud
+#define WATTR_UART_BAUD 9600 //9600 baud
 #define WATTR_UART_RX_DPTH 0x4
 #define WATTR_UART_TX_DPTH 0x2
 
@@ -25,10 +25,6 @@ static void *uart_rx_fifo[WATTR_UART_RX_DPTH];
 static void *uart_tx_fifo[WATTR_UART_TX_DPTH];
 
 
-
-#define UART_SET_BAUD(baud) \
-UART_BRGR_CD((uint32_t)(1/baud))
-
 void uart_endrx_handler(void)
 {
 	//Push the current block address onto the FIFO
@@ -37,8 +33,8 @@ void uart_endrx_handler(void)
 		uart_rx_buff = alloc_wbuff(SML_BLOCK_WL);
 	} 
 	if(uart_rx_buff){
-		UART0->UART_RPR = UART_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
-		UART0->UART_RCR = UART_RCR_RXCTR(uart_rx_buff->length);
+		PDC_UART0->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
+		PDC_UART0->PERIPH_RCR = PERIPH_RCR_RXCTR(uart_rx_buff->length);
 	}
 	return;
 }
@@ -52,20 +48,22 @@ static void config_uart(void)
 		WATTR_UART_TX_DPTH);
 	//Enable the clock using the power management controller
 	PMC->PMC_PCER0 = PMC_PCER0_PID7;
-	//Unmask the UART0 interrupt in the NVIC
-	NVIC_EnableIRQ(UART0_IRQn);
 	//Reset and disable UART0
 	UART0->UART_CR = UART_CR_RSTTX | UART_CR_RSTTX |
 		UART_CR_TXDIS | UART_CR_RXDIS | UART_CR_RSTSTA; 
 	//Find correct divider value to generate baud-rate.
-	int baud_div = ((SystemCoreClock/WATTR_UART_BAUD)>>4);
-	UART0->UART_BRGR |= UART_SET_BAUD(baud_div);
-	//Set the UART mode to Normal, with no parity bit 
-	UART0->UART_MR |= UART_MR_CHMODE_NORMAL | UART_MR_PAR_NO;
+	UART0->UART_BRGR = (uint32_t)(SystemCoreClock/(WATTR_UART_BAUD *16));
+	//Set the UART mode to Normal, with no parity bit
+	//Attempting to make it work with remote loopback
+	UART0->UART_MR = UART_MR_CHMODE_NORMAL | UART_MR_PAR_NO;
 	//Enable interrupt for end of receive transfer
 	UART0->UART_IER = UART_IER_ENDRX;
 	//Enable transmitter and receiver
-	UART0->UART_CR |= UART_CR_TXEN | UART_CR_RXEN;
+	UART0->UART_CR = UART_CR_TXEN | UART_CR_RXEN;
+	//Enable PDC
+	PDC_UART0->PERIPH_PTCR = PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
+	//Unmask the UART0 interrupt in the NVIC
+	NVIC_EnableIRQ(UART0_IRQn);
 	return;
 }
 
@@ -98,7 +96,7 @@ void make_rs232_driver(pdc_periph *rs232)
 void service_uart(void)
 {
 	//Only service if the TX PDC channel is inactive
-	if(UART0->UART_SR & UART_SR_TXRDY){
+	if(UART0->UART_SR & UART_SR_TXBUFE){
 		if(uart_tx_buff){
 			free_wbuff(uart_tx_buff);
 			uart_tx_buff = 0;
@@ -106,25 +104,17 @@ void service_uart(void)
 		wbuff *tx_wb = dequeue(&wattr_uart_tx_queue); //wbuff to transmit
 		if(tx_wb){
 			uart_tx_buff = tx_wb;
-			UART0->UART_TPR = UART_TPR_TXPTR((uint32_t)(uart_tx_buff->buff));
+			PDC_UART0->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)(uart_tx_buff->buff));
 			//Begins transmission
-			UART0->UART_TCR = UART_TCR_TXCTR(uart_tx_buff->length);
-			UART0->UART_CR = UART_CR_TXEN;
-		}
-	}
-	if(!uart_rx_buff){
-		wbuff *rx_wb = alloc_wbuff(SML_BLOCK_WL);
-		if(rx_wb){
-			uart_rx_buff = rx_wb;
-			UART0->UART_RPR = UART_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
-			UART0->UART_RCR = UART_RCR_RXCTR(uart_rx_buff->length);			
+			PDC_UART0->PERIPH_TCR = PERIPH_TCR_TXCTR(uart_tx_buff->length);
 		}
 	}
 	return;
 }
 void UART0_Handler(void)
 {
-	if(UART0->UART_SR & UART_SR_ENDRX){
+
+	if(UART0->UART_SR & UART_SR_RXBUFF){
 		uart_endrx_handler();	
 	}
 }
