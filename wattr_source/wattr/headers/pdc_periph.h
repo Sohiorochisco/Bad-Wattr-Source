@@ -10,7 +10,7 @@
 
 
 #ifndef PDC_PERIPH
-#define PDE_PERIPH
+#define PDC_PERIPH
 #include "wattr_mem.h"
 typedef struct{
 	wbuff *(*read)(void);
@@ -25,8 +25,13 @@ void make_rs232_driver(pdc_periph *rs232);
 
 void make_ade7753_driver(pdc_periph *ade_driver);
 
+
+/*These functions are called from the system timer interrupt
+ *handler, as part of an attempt to 
 void service_ade(void);
 
 void service_uart(void);
+
+void service_twi(void;
 
 #endif

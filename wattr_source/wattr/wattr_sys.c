@@ -7,7 +7,11 @@
 #include "sam.h"
 #include "headers/pdc_periph.h"
 #include "headers/wattr_mem.h"
+#include "headers/wattr_pio.h"
 #define SYS_SERVICE_PERIOD 500
+
+static pdc_periph wattr_uart;
+static pdc_periph wattr_ade;
 
 //Services that should execute every time that 
 #define WATTR_SERVICES(XXX)\
@@ -20,14 +24,14 @@
 	XXX(wattr_ade)\
 	0
 	
-	
+#define POINTER_LIST(a) &a ,
 #define LIST(a) a, 
 #define COUNT(a) 1 +
 
 static void (*wattr_srvs[])(void) = {WATTR_SERVICES(LIST)};
 static uint8_t wattr_srvscount = WATTR_SERVICES(COUNT);
-static pdc_periph *wattr_prphs[] = WATTR_PERIPHS(LIST);
-static uint8_t wattr_prph_count;
+static pdc_periph *wattr_prphs[] = {WATTR_PERIPHS(POINTER_LIST)};
+static uint8_t wattr_prph_count = WATTR_PERIPHS(COUNT);
 
 wbuff *wattr_read_buff(uint8_t periph_id)
 {
@@ -61,11 +65,26 @@ void config_systime(void)
 	SysTick->VAL = 0;
 	//enable system counter
 	SysTick->CTRL = SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+	NVIC_SetPriority(SysTick_IRQn,12);
+	NVIC_EnableIRQ(SysTick_IRQn);
 }
+
+void wattr_sys_init(void)
+{
+		pools_init();
+		//Configure PIO controllers
+		pio_config();
+		//Initialize UART driver structures, implement API
+		make_rs232_driver(&wattr_uart);
+		make_ade7753_driver(&wattr_ade);
+		config_systime();
+		return;	
+}
+
 
 void SysTick_Handler(void)
 {
-	if(SysTick->CTRL & SysTick_CTRL_CLKSOURCE_Msk){
+	if(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk){
 		int i = 0;
 		//perform all necessary periodic services
 		for(; i < wattr_srvscount; ++i){

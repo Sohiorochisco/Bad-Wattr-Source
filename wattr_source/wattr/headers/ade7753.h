@@ -14,6 +14,7 @@
 #define ADE_SPI_CLK_PHASE				0
 #define ADE_SPI_DLYBS					0x40
 #define ADE_SPI_DLYBCT					0x10
+#define ADE_SPI_CLKRATE					3.579545
 static uint32_t gs_ul_spi_clock = 500000;
 
 #define VRMS_SLOPE					(0.000237748f)
@@ -182,6 +183,17 @@ static uint32_t gs_ul_spi_clock = 500000;
 
 #define ADE_REG_DIEREV				0x3F
 #define ADE_REG_DIEREV_WBITS			8
+
+//used to format a register write to the ade7753
+inline void write_ade_reg(wbuff *wb,uint32_t wrd,uint8_t reg, uint32_t wl)
+{
+	uint32_t shft_wrd = wrd <<(24 % wl);
+	wb->buff[0] = reg | ADE_WRITE_MASK;
+	wb->buff[1] = (uint8_t)shft_wrd >> 2;
+	wb->buff[2] = (uint8_t)((shft_wrd << 1) >> 2);
+	wb->buff[3] = (uint8_t)((shft_wrd << 2) >> 2);
+	return;
+ }
 
 
 

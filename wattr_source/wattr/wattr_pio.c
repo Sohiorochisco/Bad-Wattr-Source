@@ -57,6 +57,8 @@
 /*SPI SPCK	*/
 /*UART0 TX */
 /*UART0 RX */
+/*TWI 0		*/
+/*TWI 1		*/
 #define WATTR_PERIPH_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
 	ENTRYA(PIO_PDR_P12,0,0)\
 	ENTRYA(PIO_PDR_P13,0,0)\
@@ -64,6 +66,8 @@
 	ENTRYA(PIO_PDR_P14,0,0)\
 	ENTRYA(PIO_PDR_P10,0,0)\
 	ENTRYA(PIO_PDR_P9,0,0)\
+	ENTRYA(PIO_PDR_P4,0,0)\
+	ENTRYA(PIO_PDR_P3,0,0)\
 0/*Avoid trailing operator */
 
 
@@ -213,18 +217,18 @@ void PIOC_Handler()
 
 void PIOD_Handler()
 {
-		uint32_t mask = PIOD->PIO_IMR & PIOD->PIO_ISR;
-		int i = 0;
-		for(;i < piob_icount;++i){
-			if(mask & piod_masks[i]){
-				piod_handlers[i]();
-				mask &= ~piod_masks[i];//Indicate irq handled
-			}
-			if(!mask){
-				break;
-			}
+	uint32_t mask = PIOD->PIO_IMR & PIOD->PIO_ISR;
+	int i = 0;
+	for(;i < piob_icount;++i){
+		if(mask & piod_masks[i]){
+			piod_handlers[i]();
+			mask &= ~piod_masks[i];//Indicate irq handled
 		}
-		return;	
+		if(!mask){
+			break;
+		}
+	}
+	return;	
 }
 
 //Definitions for the Peripheral controlled lines
@@ -277,22 +281,26 @@ void pio_config(void)
 	//Enable the clocks for each PIO controller
 	PMC->PMC_PCER0 = PMC_PCER0_PID9 | PMC_PCER0_PID10 |
 		PMC_PCER0_PID11 | PMC_PCER0_PID12;
-	//Enable all pio interrupts that may be used
-	if(pioa_icount){
-		NVIC_EnableIRQ(PIOA_IRQn);
-	}
-	if(piob_icount){
-		NVIC_EnableIRQ(PIOB_IRQn);
-	}
-	if(pioc_icount){
-		NVIC_EnableIRQ(PIOC_IRQn);
-	}
-	if(piod_icount){
-		NVIC_EnableIRQ(PIOD_IRQn);
-	}
 	wattr_periph_config();
 	wattr_output_config();
 	config_pio_irq();
+	//Enable all pio interrupts that may be used
+	if(pioa_icount){
+		NVIC_SetPriority(PIOA_IRQn,5);
+		NVIC_EnableIRQ(PIOA_IRQn);
+	}
+	if(piob_icount){
+		NVIC_SetPriority(PIOB_IRQn,5);
+		NVIC_EnableIRQ(PIOB_IRQn);
+	}
+	if(pioc_icount){
+		NVIC_SetPriority(PIOC_IRQn,5);
+		NVIC_EnableIRQ(PIOC_IRQn);
+	}
+	if(piod_icount){
+		NVIC_SetPriority(PIOD_IRQn,5);
+		NVIC_EnableIRQ(PIOD_IRQn);
+	}
 }
 
 //Button press handlers - likely outsourced to ATTINY

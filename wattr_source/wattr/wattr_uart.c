@@ -54,7 +54,6 @@ static void config_uart(void)
 	//Find correct divider value to generate baud-rate.
 	UART0->UART_BRGR = (uint32_t)(SystemCoreClock/(WATTR_UART_BAUD *16));
 	//Set the UART mode to Normal, with no parity bit
-	//Attempting to make it work with remote loopback
 	UART0->UART_MR = UART_MR_CHMODE_NORMAL | UART_MR_PAR_NO;
 	//Enable interrupt for end of receive transfer
 	UART0->UART_IER = UART_IER_ENDRX;
@@ -63,6 +62,7 @@ static void config_uart(void)
 	//Enable PDC
 	PDC_UART0->PERIPH_PTCR = PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
 	//Unmask the UART0 interrupt in the NVIC
+	NVIC_SetPriority(UART0_IRQn,10);
 	NVIC_EnableIRQ(UART0_IRQn);
 	return;
 }

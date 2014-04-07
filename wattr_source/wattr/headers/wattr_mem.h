@@ -9,7 +9,7 @@
 #include "mem/wattr_alloc.h"
 
 #define	ADE_RXBUFF_DPTH	5
-#define ADE_TXBUFF_DPTH 3
+#define ADE_TXBUFF_DPTH 5
 #define	ADE_RXBUFF_WL	SML_BLOCK_WL
 
 #define	SCREEN_WRBUFF_DPTH 5
