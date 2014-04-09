@@ -36,7 +36,6 @@ int main(void)
 	uint32_t blink = ONES;
 	wbuff *test_word = 0;
 	wbuff *comm_word = 0;
-	wbuff *dummywb = 0;
 	uint32_t st = 0;
 	wbuff *read_spi_stuff = 0;
 		wbuff *mode_conf = alloc_wbuff(TNY_BLOCK_WL);
@@ -48,16 +47,31 @@ int main(void)
 		wattr_write_buff(WATTR_ADE_PID,mode_conf);
 		wattr_write_buff(WATTR_ADE_PID,lcyc_conf);
 		wattr_write_buff(WATTR_ADE_PID,irq_en);
+		int i = 0;
     while (1) {
 		if(!test_word){
-			test_word = wattr_read_buff(WATTR_UART_PID);
+			test_word = alloc_wbuff(TNY_BLOCK_WL);
 		}
 		if(test_word){
-			st = wattr_write_buff(WATTR_UART_PID,test_word);
+			test_word->buff[0] = ADE_REG_DIEREV;
+			for(i=1;i < 4; ++i){
+				test_word->buff[i] = 0;
+			}
+			st = wattr_write_buff(WATTR_ADE_PID,test_word);
 			if(st){
 				free_wbuff(test_word);
 			}
 			test_word = 0;
+		}
+		if(!comm_word){
+			comm_word = wattr_read_buff(WATTR_ADE_PID);
+		}
+		if(comm_word){
+			st = wattr_write_buff(WATTR_UART_PID,comm_word);
+			if(st){
+				free_wbuff(comm_word);
+			}
+			comm_word = 0;
 		}
 	}
 }

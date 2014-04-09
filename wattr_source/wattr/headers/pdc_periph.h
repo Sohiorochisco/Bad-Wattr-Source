@@ -27,11 +27,12 @@ void make_ade7753_driver(pdc_periph *ade_driver);
 
 
 /*These functions are called from the system timer interrupt
- *handler, as part of an attempt to 
+ *handler, to take care of loading the DMA controllers
+ */
 void service_ade(void);
 
 void service_uart(void);
 
-void service_twi(void;
+void service_twi(void);
 
 #endif

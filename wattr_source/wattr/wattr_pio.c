@@ -27,7 +27,7 @@
 	//ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)
 	
 #define WATTR_INTERRUPT_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
-	ENTRYA(PIO_PER_P15,0,0,PIO_FELLSR_P15,&ade_irq_handler)\
+	ENTRYC(PIO_PER_P9,0,0,PIO_FELLSR_P15,&ade_irq_handler)\
 	ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)\
 	ENTRYD(PIO_PER_P27,0,PIO_REHLSR_P27,0,&fp_ubutton_handler)\
 	ENTRYD(PIO_PER_P25,0,PIO_REHLSR_P25,0,&fp_dbutton_handler)\

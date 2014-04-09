@@ -133,15 +133,16 @@ static void comms_rxend_handler(void)
 		break;
 	case COM_WRD:
 		if(ade_com_buff){
-			if(!(ade_com_buff->buff[0] & ADE_WRITE_MASK)){
+			uint8_t wr_check = ade_com_buff->buff[0] & ADE_WRITE_MASK;
+			if(wr_check){
+				free_wbuff(ade_rx_buff);
+			}else{
 				uint32_t i = 0;
 				for(; i < ade_rx_buff->length;i+=4){
 					//combine the register addresses with contents
 					ade_rx_buff->buff[i] |= (ade_com_buff->buff[i]);
 				}
 				enqueue(&ade_rx_queue,ade_rx_buff);
-			}else{
-				free_wbuff(ade_rx_buff);
 			}
 			free_wbuff(ade_com_buff);
 			ade_com_buff = 0;
