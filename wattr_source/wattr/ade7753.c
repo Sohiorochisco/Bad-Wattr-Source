@@ -47,16 +47,15 @@ static void config_spi(void)
 	PMC->PMC_PCER0 = PMC_PCER0_PID19;
 	//reset the channel
 	SPI->SPI_CR = SPI_CR_SWRST | SPI_CR_SPIDIS;
-	SPI->SPI_CSR[0] |=  SPI_CSR_SCBR(61);
+	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(6000);
 	/*Ensure that the spi channel is in master mode, and
 	 *choose chip select channel zero */
-	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(14) | 
+	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(1) | 
 		SPI_MR_MODFDIS | SPI_MR_WDRBT;
 	/* Set clock phase and polarity for the ADE7753 chip select*/
-	SPI->SPI_CSR[0] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA);
-	//Ensure that the chip select will stay selected between words
-	SPI->SPI_CSR[0] |= SPI_CSR_CSAAT;
-	//Enable tranceiver
+	SPI->SPI_CSR[1] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA);
+	//Force chip select to come high between transfers
+	//Enable tranciever
 	SPI->SPI_CR = SPI_CR_SPIEN;
 	//Disable PDC
 	PDC_SPI->PERIPH_PTCR |= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
@@ -136,6 +135,7 @@ static void comms_rxend_handler(void)
 			uint8_t wr_check = ade_com_buff->buff[0] & ADE_WRITE_MASK;
 			if(wr_check){
 				free_wbuff(ade_rx_buff);
+				ade_rx_buff = 0;
 			}else{
 				uint32_t i = 0;
 				for(; i < ade_rx_buff->length;i+=4){
@@ -143,6 +143,7 @@ static void comms_rxend_handler(void)
 					ade_rx_buff->buff[i] |= (ade_com_buff->buff[i]);
 				}
 				enqueue(&ade_rx_queue,ade_rx_buff);
+				ade_rx_buff = 0;
 			}
 			free_wbuff(ade_com_buff);
 			ade_com_buff = 0;
@@ -184,9 +185,7 @@ void ade_zx_handler(void)
 void service_ade(void)
 {
 	wbuff *tx_wb = 0; //wbuff to transmit
-	if(!(SPI->SPI_SR & SPI_SR_TXBUFE)){
-		//Don't do anything (last transfer hasn't finished yet)
-	}else{
+	if(SPI->SPI_SR & SPI_SR_TXBUFE){
 		//Finally, see if there is a pending com write
 		tx_wb = dequeue(&ade_tx_queue);
 		ade_flags.spiwrd = tx_wb? COM_WRD: NONE;
@@ -197,6 +196,9 @@ void service_ade(void)
 			ade_rx_buff = rxnext;
 			ade_com_buff = tx_wb;
 			spi_transfer_wbuff(tx_wb,ade_rx_buff);
+		}else{
+			free_wbuff(tx_wb);
+			tx_wb = 0;
 		}
 	}
 	if(!ade_irqrx_buff){

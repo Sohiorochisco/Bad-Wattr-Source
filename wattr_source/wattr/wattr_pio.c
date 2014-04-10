@@ -25,9 +25,9 @@
 //handler pointer)
 	//ENTRYA(PIO_PER_P15,0,0,PIO_FELLSR_P15,&ade_irq_handler)
 	//ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)
+	//ENTRYC(PIO_PER_P9,0,0,PIO_FELLSR_P15,&ade_irq_handler)
 	
 #define WATTR_INTERRUPT_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
-	ENTRYC(PIO_PER_P9,0,0,PIO_FELLSR_P15,&ade_irq_handler)\
 	ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)\
 	ENTRYD(PIO_PER_P27,0,PIO_REHLSR_P27,0,&fp_ubutton_handler)\
 	ENTRYD(PIO_PER_P25,0,PIO_REHLSR_P25,0,&fp_dbutton_handler)\
@@ -45,12 +45,14 @@
 	ENTRYD(PIO_PER_P22)\
 	ENTRYD(PIO_PER_P23)\
 	ENTRYD(PIO_PER_P24)\
+	ENTRYA(PIO_PER_P25)\
 	0
 	
 
 
 //Defines the lines under control of peripherals.
 // Use format ENTRY*PIO block*(pin mask,periph bit 1, bit 2)
+/*SPI CS   */
 /*SPI MISO */
 /*SPI MOSI */
 /*SPI NPCS0	*/
@@ -60,18 +62,15 @@
 /*TWI 0		*/
 /*TWI 1		*/
 #define WATTR_PERIPH_LINES(ENTRYA,ENTRYB,ENTRYC,ENTRYD)\
+	ENTRYA(PIO_PER_P31,0,0)\
 	ENTRYA(PIO_PDR_P12,0,0)\
 	ENTRYA(PIO_PDR_P13,0,0)\
-	ENTRYA(PIO_PDR_P11,0,0)\
 	ENTRYA(PIO_PDR_P14,0,0)\
 	ENTRYA(PIO_PDR_P10,0,0)\
 	ENTRYA(PIO_PDR_P9,0,0)\
 	ENTRYA(PIO_PDR_P4,0,0)\
 	ENTRYA(PIO_PDR_P3,0,0)\
 0/*Avoid trailing operator */
-
-
-#define WATTR_PMC_CLK_LINES
 
 
 //Interrupt vector definitions
