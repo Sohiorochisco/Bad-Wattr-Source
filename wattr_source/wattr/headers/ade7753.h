@@ -189,9 +189,9 @@ inline void write_ade_reg(wbuff *wb,uint32_t wrd,uint8_t reg, uint32_t wl)
 {
 	uint32_t shft_wrd = wrd <<(24 % wl);
 	wb->buff[0] = reg | ADE_WRITE_MASK;
-	wb->buff[1] = (uint8_t)shft_wrd >> 2;
-	wb->buff[2] = (uint8_t)((shft_wrd << 1) >> 2);
-	wb->buff[3] = (uint8_t)((shft_wrd << 2) >> 2);
+	wb->buff[1] = (uint8_t)shft_wrd >> 16;
+	wb->buff[2] = (uint8_t)((shft_wrd << 8) >> 16);
+	wb->buff[3] = (uint8_t)((shft_wrd << 16) >> 16);
 	return;
  }
 

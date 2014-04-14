@@ -72,6 +72,7 @@ static inline void spi_transfer_wbuff(wbuff *wbp,wbuff *rwbp)
 	PDC_SPI->PERIPH_RPR		= PERIPH_RPR_RXPTR((uint32_t)(rwbp->buff));
 	PDC_SPI->PERIPH_RCR		= PERIPH_RCR_RXCTR(wbp->length);
 	PDC_SPI->PERIPH_TCR		= PERIPH_TCR_TXCTR(wbp->length);
+	SPI->SPI_CSR[1]			&= ~(SPI_CSR_CSNAAT);
 	SPI->SPI_IER			= SPI_IER_ENDTX;
 	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
 }
@@ -116,6 +117,7 @@ void make_ade7753_driver(pdc_periph *ade_driver)
 //Handler for received memory from the dynamic access memory controller
 static void comms_rxend_handler(void)
 {
+	SPI->SPI_CSR[1] |= SPI_CSR_CSNAAT;
 	PDC_SPI->PERIPH_PTCR |= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS; 
 	wbuff *tx_wr = 0;
 	wbuff *rx_wr = 0;

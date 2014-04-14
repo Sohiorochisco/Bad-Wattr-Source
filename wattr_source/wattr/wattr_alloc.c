@@ -147,8 +147,6 @@ uint32_t free_wbuff(wbuff *oldbuff)
 	uint32_t st = 4;
 	if(oldbuff){
 		uint32_t l = oldbuff->length;
-		uint32_t st = b_free(oldbuff->buff,l);
-		uint32_t l = oldbuff->length;
 		st = b_free(oldbuff->buff,l);
 		st += b_free(oldbuff,sizeof(wbuff));
 	}

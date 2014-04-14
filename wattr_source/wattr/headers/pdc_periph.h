@@ -27,11 +27,11 @@ void make_ade7753_driver(pdc_periph *ade_driver);
 
 
 /*These functions are called from the system timer interrupt
- *handler, as part of an attempt to 
+ *handler, in order to read from the peripheral write queues */
 void service_ade(void);
 
 void service_uart(void);
 
-void service_twi(void;
+//void service_twi(void;
 
 #endif

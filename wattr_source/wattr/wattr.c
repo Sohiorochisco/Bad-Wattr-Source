@@ -39,34 +39,34 @@ int main(void)
 	wbuff *comm_word = 0;
 	uint32_t st = 0;
 	wbuff *read_spi_stuff = 0;
-	wbuff *mode_conf = lp_alloc_wbuff(TNY_BLOCK_WL);
-	wbuff *lcyc_conf = lp_alloc_wbuff(TNY_BLOCK_WL);
+	//wbuff *mode_conf = lp_alloc_wbuff(TNY_BLOCK_WL);
+	//wbuff *lcyc_conf = lp_alloc_wbuff(TNY_BLOCK_WL);
 	wbuff *irq_en	= lp_alloc_wbuff(TNY_BLOCK_WL);
-	write_ade_reg(mode_conf,0x700C,ADE_REG_GAIN,ADE_REG_GAIN_WBITS);
-	write_ade_reg(lcyc_conf,200,ADE_REG_LINECYC,ADE_REG_LINECYC_WBITS);
+	//write_ade_reg(mode_conf,0x700C,ADE_REG_GAIN,ADE_REG_GAIN_WBITS);
+	//write_ade_reg(lcyc_conf,200,ADE_REG_LINECYC,ADE_REG_LINECYC_WBITS);
 	write_ade_reg(irq_en,(0x1u << 3),ADE_REG_IRQEN,ADE_REG_IRQEN_WBITS);
-	periph_write_buff(WATTR_ADE_PID,mode_conf);
-	periph_write_buff(WATTR_ADE_PID,lcyc_conf);
+	//periph_write_buff(WATTR_ADE_PID,mode_conf);
+	//periph_write_buff(WATTR_ADE_PID,lcyc_conf);
 	periph_write_buff(WATTR_ADE_PID,irq_en);
 	int i = 0;
     while (1) {
-		if(!test_word){
-			test_word = lp_alloc_wbuff(TNY_BLOCK_WL);
-		}
-		if(test_word){
-			test_word->buff[0] = ADE_REG_DIEREV;
-			for(i=1;i < 4; ++i){
-				test_word->buff[i] = 0;
-			}
-			test_word->buff[4] = ADE_REG_DIEREV;
-			for(i=5; i< 8; ++i){
-				test_word->buff[i] = 0;
-			}
-			do{
-				st = periph_write_buff(WATTR_ADE_PID,test_word);
-			}while(st);
-		}
-		test_word = 0;
+//		if(!test_word){
+//			test_word = lp_alloc_wbuff(TNY_BLOCK_WL);
+//		}
+//		if(test_word){
+//			test_word->buff[0] = ADE_REG_DIEREV;
+//			for(i=1;i < 4; ++i){
+//				test_word->buff[i] = 0;
+//			}
+//			test_word->buff[4] = ADE_REG_DIEREV;
+//			for(i=5; i< 8; ++i){
+//				test_word->buff[i] = 0;
+//			}
+//			do{
+//				st = periph_write_buff(WATTR_ADE_PID,test_word);
+//			}while(st);
+//		}
+//		test_word = 0;
 		while(!comm_word){
 			comm_word = periph_read_buff(WATTR_ADE_PID);
 		}
