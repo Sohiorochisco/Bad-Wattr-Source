@@ -112,7 +112,7 @@ uint32_t b_free(void *p, uint32_t size)
 		break;
 	case TNY_BLOCK_WL:
 		--leak_count_tny;
-		e = enqueue(&sml_mqueue, p);
+		e = enqueue(&tny_mqueue, p);
 		break;
 	default:
 		e = 1;
@@ -130,7 +130,7 @@ wbuff *alloc_wbuff(uint32_t l)
 	 *for the minimal wbuff
 	 */
 	if(l > 4){
-		b = (wbuff*)b_alloc(TNY_BLOCK_WL);
+		b = (wbuff*)b_alloc(sizeof(wbuff));
 	}else{
 		b = 0;
 	}
@@ -146,7 +146,7 @@ uint32_t free_wbuff(wbuff *oldbuff)
 	--leak_count_wbuff;
 	uint32_t l = oldbuff->length;
 	uint32_t st = b_free(oldbuff->buff,l);
-	st += b_free(oldbuff,TNY_BLOCK_WL);
+	st += b_free(oldbuff,sizeof(wbuff));
 	return st;
 }
 

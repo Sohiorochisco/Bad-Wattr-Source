@@ -47,15 +47,13 @@ static void config_spi(void)
 	PMC->PMC_PCER0 = PMC_PCER0_PID19;
 	//reset the channel
 	SPI->SPI_CR = SPI_CR_SWRST | SPI_CR_SPIDIS;
-	SPI->SPI_CSR[0] |=  SPI_CSR_SCBR(61);
+	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(6000);
 	/*Ensure that the spi channel is in master mode, and
 	 *choose chip select channel zero */
-	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(14) | 
+	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(13) | 
 		SPI_MR_MODFDIS | SPI_MR_WDRBT;
 	/* Set clock phase and polarity for the ADE7753 chip select*/
-	SPI->SPI_CSR[0] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA);
-	//Ensure that the chip select will stay selected between words
-	SPI->SPI_CSR[0] |= SPI_CSR_CSAAT;
+	SPI->SPI_CSR[1] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA);
 	//Enable tranceiver
 	SPI->SPI_CR = SPI_CR_SPIEN;
 	//Disable PDC
@@ -115,20 +113,21 @@ void make_ade7753_driver(pdc_periph *ade_driver)
 	return;
 }
 
-//Handler for reloading the dynamic memory access controller, and processing reads
+//Handler for received memory from the dynamic access memory controller
 static void comms_rxend_handler(void)
 {
+	PDC_SPI->PERIPH_PTCR |= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS; 
+	wbuff *tx_wr = 0;
+	wbuff *rx_wr = 0;
 	switch(ade_flags.spiwrd){
 	case IRQ_WRD:
-		ade_irqrx_buff->buff[0] = ade_irq_buff.buff[0];
-		ade_irqrx_buff->buff[4] = ade_irq_buff.buff[4];
-		enqueue(&ade_rx_queue,ade_irqrx_buff);
+		tx_wr = &ade_irq_buff;
+		rx_wr = ade_irqrx_buff;
 		ade_irqrx_buff = alloc_wbuff(TNY_BLOCK_WL);
 		break;
 	case ZX_WRD:
-		ade_zxrx_buff->buff[0] = ade_zx_buff.buff[0];
-		ade_zxrx_buff->buff[4] = ade_zx_buff.buff[4];
-		enqueue(&ade_rx_queue,ade_zxrx_buff);
+		tx_wr = &ade_zx_buff;
+		rx_wr = ade_zxrx_buff;
 		ade_zxrx_buff = alloc_wbuff(TNY_BLOCK_WL);
 		break;
 	case COM_WRD:
@@ -136,13 +135,11 @@ static void comms_rxend_handler(void)
 			uint8_t wr_check = ade_com_buff->buff[0] & ADE_WRITE_MASK;
 			if(wr_check){
 				free_wbuff(ade_rx_buff);
+				ade_rx_buff = 0;
 			}else{
-				uint32_t i = 0;
-				for(; i < ade_rx_buff->length;i+=4){
-					//combine the register addresses with contents
-					ade_rx_buff->buff[i] |= (ade_com_buff->buff[i]);
-				}
-				enqueue(&ade_rx_queue,ade_rx_buff);
+				tx_wr = ade_com_buff;
+				rx_wr = ade_rx_buff;
+				ade_rx_buff = 0;
 			}
 			free_wbuff(ade_com_buff);
 			ade_com_buff = 0;
@@ -151,7 +148,26 @@ static void comms_rxend_handler(void)
 	case NONE: break;
 	default: break;
 	}
-	ade_rx_buff = 0;
+	if (tx_wr && rx_wr){
+		uint32_t i = 0;
+		for(; i < ade_rx_buff->length;i+=4){
+			//combine the register addresses with contents
+			rx_wr->buff[i] |= tx_wr->buff[i];
+		}
+		uint32_t st = enqueue(&ade_rx_queue,rx_wr);
+		if(st){
+			free_wbuff(rx_wr);
+		}
+		rx_wr = 0;
+		free_wbuff(tx_wr);
+		tx_wr = 0;
+	}
+	if(tx_wr){
+		free_wbuff(tx_wr);
+	}
+	if(rx_wr){
+		free_wbuff(rx_wr);
+	}
 	ade_flags.spiwrd = NONE;
 	return;		
 }
@@ -184,26 +200,20 @@ void ade_zx_handler(void)
 void service_ade(void)
 {
 	wbuff *tx_wb = 0; //wbuff to transmit
-	if(!(SPI->SPI_SR & SPI_SR_TXBUFE)){
-		//Don't do anything (last transfer hasn't finished yet)
-	}else{
-		//Finally, see if there is a pending com write
+	if(SPI->SPI_SR & SPI_SR_TXBUFE){
+		//see if there is a pending com write
 		tx_wb = dequeue(&ade_tx_queue);
-		ade_flags.spiwrd = tx_wb? COM_WRD: NONE;
-	}
-	if(tx_wb){
-		wbuff *rxnext = alloc_wbuff(tx_wb->length);
-		if(rxnext){
-			ade_rx_buff = rxnext;
-			ade_com_buff = tx_wb;
-			spi_transfer_wbuff(tx_wb,ade_rx_buff);
+		if(tx_wb){
+			wbuff *rxnext = alloc_wbuff(tx_wb->length);
+			if(rxnext){
+				ade_flags.spiwrd = COM_WRD;
+				ade_rx_buff = rxnext;
+				ade_com_buff = tx_wb;
+				spi_transfer_wbuff(tx_wb,ade_rx_buff);
+			}else{
+				ade_flags.spiwrd = NONE;
+			}
 		}
-	}
-	if(!ade_irqrx_buff){
-		ade_irqrx_buff = alloc_wbuff(TNY_BLOCK_WL);
-	}
-	if(!ade_zxrx_buff){
-		ade_zxrx_buff = alloc_wbuff(TNY_BLOCK_WL);
 	}
 	return;
 }
