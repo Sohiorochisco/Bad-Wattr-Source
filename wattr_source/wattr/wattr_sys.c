@@ -33,7 +33,7 @@ static uint8_t wattr_srvscount = WATTR_SERVICES(COUNT);
 static pdc_periph *wattr_prphs[] = {WATTR_PERIPHS(POINTER_LIST)};
 static uint8_t wattr_prph_count = WATTR_PERIPHS(COUNT);
 
-wbuff *wattr_read_buff(uint8_t periph_id)
+wbuff *periph_read_buff(uint8_t periph_id)
 {
 	if(periph_id < wattr_prph_count){
 		SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
@@ -45,7 +45,21 @@ wbuff *wattr_read_buff(uint8_t periph_id)
 	}
 }
 
-uint32_t wattr_write_buff(uint8_t periph_id,wbuff * wb)
+wbuff * lp_alloc_wbuff(uint32_t size){
+	SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
+	wbuff *wb = alloc_wbuff(size);
+	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+	return wb;
+}
+
+uint32_t lp_free_wbuff(wbuff *wb){
+	SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
+	uint32_t st = free_wbuff(wb);
+	SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+	return st;
+}
+
+uint32_t periph_write_buff(uint8_t periph_id,wbuff * wb)
 {
 	if(periph_id < wattr_prph_count){
 		SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);

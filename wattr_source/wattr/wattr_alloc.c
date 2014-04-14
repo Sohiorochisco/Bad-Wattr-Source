@@ -110,11 +110,9 @@ uint32_t b_free(void *p, uint32_t size)
 		e = enqueue(&med_mqueue, p);
 		break;
 	case SML_BLOCK_WL:
-		++free_count_sml;
 		e = enqueue(&sml_mqueue, p);
 		break;
 	case TNY_BLOCK_WL:
-		++free_count_tny;
 		e = enqueue(&tny_mqueue, p);
 		break;
 	default:
@@ -133,7 +131,7 @@ wbuff *alloc_wbuff(uint32_t l)
 	 *for the minimal wbuff
 	 */
 	if(l > 4){
-		b = (wbuff*)b_alloc(TNY_BLOCK_WL);
+		b = (wbuff*)b_alloc(sizeof(wbuff));
 	}else{
 		b = 0;
 	}
@@ -146,12 +144,13 @@ wbuff *alloc_wbuff(uint32_t l)
 
 uint32_t free_wbuff(wbuff *oldbuff)
 {
-	++free_count_wbuff;
 	uint32_t st = 4;
 	if(oldbuff){
 		uint32_t l = oldbuff->length;
 		uint32_t st = b_free(oldbuff->buff,l);
-		st += b_free(oldbuff,TNY_BLOCK_WL);
+		uint32_t l = oldbuff->length;
+		st = b_free(oldbuff->buff,l);
+		st += b_free(oldbuff,sizeof(wbuff));
 	}
 	return st;
 }
