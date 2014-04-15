@@ -185,13 +185,17 @@ static uint32_t gs_ul_spi_clock = 500000;
 #define ADE_REG_DIEREV_WBITS			8
 
 //used to format a register write to the ade7753
-inline void write_ade_reg(wbuff *wb,uint32_t wrd,uint8_t reg, uint32_t wl)
+inline void write_ade_reg(uint8_t  *b,uint32_t wrd,uint8_t reg, uint32_t wl)
 {
 	uint32_t shft_wrd = wrd <<(24 % wl);
-	wb->buff[0] = reg | ADE_WRITE_MASK;
-	wb->buff[1] = (uint8_t)shft_wrd >> 16;
-	wb->buff[2] = (uint8_t)((shft_wrd << 8) >> 16);
-	wb->buff[3] = (uint8_t)((shft_wrd << 16) >> 16);
+	b[0] = reg | ADE_WRITE_MASK;
+	b[1] = (uint8_t)shft_wrd >> 16;
+	b[2] = (uint8_t)((shft_wrd << 8) >> 16);
+	b[3] = (uint8_t)((shft_wrd << 16) >> 16);
+	b[4] = 0;
+	b[5] = 0;
+	b[6] = 0;
+	b[7] = 0;
 	return;
  }
 

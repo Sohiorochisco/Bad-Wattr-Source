@@ -152,7 +152,7 @@ static void comms_rxend_handler(void)
 	}
 	if (tx_wr && rx_wr){
 		uint32_t i = 0;
-		for(; i < ade_rx_buff->length;i+=4){
+		for(; i < rx_wr->length;i+=4){
 			//combine the register addresses with contents
 			rx_wr->buff[i] |= tx_wr->buff[i];
 		}

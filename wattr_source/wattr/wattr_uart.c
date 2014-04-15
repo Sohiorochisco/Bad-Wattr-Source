@@ -62,7 +62,7 @@ static void config_uart(void)
 	//Enable PDC
 	PDC_UART0->PERIPH_PTCR = PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
 	//Unmask the UART0 interrupt in the NVIC
-	NVIC_SetPriority(UART0_IRQn,10);
+	NVIC_SetPriority(UART0_IRQn,8);
 	NVIC_EnableIRQ(UART0_IRQn);
 	return;
 }

@@ -32,23 +32,24 @@ int main(void)
     SystemInit();
 	//Initialize driver background processes
 	wattr_sys_init();
+	uint32_t  indexer = 1000;
+	PIOA->PIO_ODSR &= ~(PIO_ODSR_P25);
+	for(;indexer > 0; --indexer){}
 	PIOA->PIO_ODSR |= PIO_ODSR_P25;
 	uint32_t idx = 0;
 	uint32_t blink = ONES;
 	wbuff *test_word = 0; 
 	wbuff *comm_word = 0;
 	uint32_t st = 0;
-	wbuff *read_spi_stuff = 0;
-	//wbuff *mode_conf = lp_alloc_wbuff(TNY_BLOCK_WL);
-	//wbuff *lcyc_conf = lp_alloc_wbuff(TNY_BLOCK_WL);
-	wbuff *irq_en	= lp_alloc_wbuff(TNY_BLOCK_WL);
-	//write_ade_reg(mode_conf,0x700C,ADE_REG_GAIN,ADE_REG_GAIN_WBITS);
-	//write_ade_reg(lcyc_conf,200,ADE_REG_LINECYC,ADE_REG_LINECYC_WBITS);
-	write_ade_reg(irq_en,(0x1u << 3),ADE_REG_IRQEN,ADE_REG_IRQEN_WBITS);
-	//periph_write_buff(WATTR_ADE_PID,mode_conf);
-	//periph_write_buff(WATTR_ADE_PID,lcyc_conf);
-	periph_write_buff(WATTR_ADE_PID,irq_en);
-	int i = 0;
+	//wbuff *mode_conf1 = lp_alloc_wbuff(TNY_BLOCK_WL);
+	//wbuff *mode_conf2 = lp_alloc_wbuff(TNY_BLOCK_WL);
+	//wbuff *mode_conf3 = lp_alloc_wbuff(TNY_BLOCK_WL);
+	//write_ade_reg(mode_conf1->buff,0x700C,ADE_REG_GAIN,ADE_REG_GAIN_WBITS);
+	//write_ade_reg(mode_conf2->buff,200,ADE_REG_LINECYC,ADE_REG_LINECYC_WBITS);
+	//write_ade_reg(mode_conf3->buff,(0x1u << 3),ADE_REG_IRQEN,ADE_REG_IRQEN_WBITS);
+	//periph_write_buff(WATTR_ADE_PID,mode_conf1);
+	//periph_write_buff(WATTR_ADE_PID,mode_conf2);
+	//periph_write_buff(WATTR_ADE_PID,mode_conf3);
     while (1) {
 //		if(!test_word){
 //			test_word = lp_alloc_wbuff(TNY_BLOCK_WL);

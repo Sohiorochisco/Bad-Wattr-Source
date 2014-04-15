@@ -79,7 +79,7 @@ void config_systime(void)
 	SysTick->VAL = 0;
 	//enable system counter
 	SysTick->CTRL = SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
-	NVIC_SetPriority(SysTick_IRQn,12);
+	NVIC_SetPriority(SysTick_IRQn,13);
 	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
