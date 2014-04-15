@@ -47,7 +47,7 @@ static void config_spi(void)
 	PMC->PMC_PCER0 = PMC_PCER0_PID19;
 	//reset the channel
 	SPI->SPI_CR = SPI_CR_SWRST | SPI_CR_SPIDIS;
-	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(6000);
+	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(120);
 	/*Ensure that the spi channel is in master mode, and
 	 *choose chip select channel zero */
 	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(13) | 
@@ -154,24 +154,21 @@ static void comms_rxend_handler(void)
 		uint32_t i = 0;
 		for(; i < rx_wr->length;i+=4){
 			//combine the register addresses with contents
-			rx_wr->buff[i] |= tx_wr->buff[i];
+			rx_wr->buff[i] = tx_wr->buff[i];
 		}
 		uint32_t st = enqueue(&ade_rx_queue,rx_wr);
 		if(st){
 			free_wbuff(rx_wr);
 		}
 		rx_wr = 0;
-		free_wbuff(tx_wr);
+		if (ade_flags.spiwrd == COM_WRD){
+			free_wbuff(tx_wr);
+		}
 		tx_wr = 0;
 	}
-	if(tx_wr){
-		free_wbuff(tx_wr);
+	if(tx_wr || rx_wr){
+		
 	}
-	if(rx_wr){
-		free_wbuff(rx_wr);
-	}
-	ade_flags.spiwrd = NONE;
-	return;		
 }
 
 void SPI_Handler(void)
@@ -193,7 +190,7 @@ void ade_irq_handler(void)
 }
 void ade_zx_handler(void)
 {
-	if(SPI->SPI_SR & SPI_SR_ENDTX){
+	if(SPI->SPI_SR & SPI_SR_TXBUFE){
 		ade_flags.spiwrd = ZX_WRD;
 		spi_transfer_wbuff(&ade_zx_buff,ade_zxrx_buff);
 	}
