@@ -12,14 +12,15 @@
 #define BIG_BLOCK_WL	256
 #define BIG_BLOCK_NUM	2
 //Define the dimensions of the pool of medium memory blocks
-#define MED_BLOCK_WL	32
-#define MED_BLOCK_NUM	32
+#define MED_BLOCK_WL	16
+#define MED_BLOCK_NUM	64
 //Define the dimensions of the pool of small memory blocks
-#define SML_BLOCK_WL	12
+#define SML_BLOCK_WL	4
 #define SML_BLOCK_NUM	64
 #define TNY_BLOCK_WL	8
 #define TNY_BLOCK_NUM	128
 
+#define SINGLE_BYTE_NUM 20
 
 void pools_init();
 

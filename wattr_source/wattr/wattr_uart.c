@@ -30,7 +30,7 @@ void uart_endrx_handler(void)
 	//Push the current block address onto the FIFO
 	uint32_t e = enqueue(&wattr_uart_rx_queue,uart_rx_buff);
 	if(!e){
-		uart_rx_buff = alloc_wbuff(SML_BLOCK_WL);
+		uart_rx_buff = alloc_wbuff(1);
 	} 
 	if(uart_rx_buff){
 		PDC_UART0->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
@@ -87,7 +87,12 @@ static uint32_t wattr_uart_write(wbuff *w)
 
 void make_rs232_driver(pdc_periph *rs232)
 {
+	uart_rx_buff = alloc_wbuff(1);
 	config_uart();
+	if(uart_rx_buff){
+		PDC_UART0->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
+		PDC_UART0->PERIPH_RCR = PERIPH_RCR_RXCTR(uart_rx_buff->length);
+	}
 	rs232->read = &wattr_uart_read;
 	rs232->write = &wattr_uart_write;
 	return;

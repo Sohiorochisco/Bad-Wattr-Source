@@ -12,16 +12,19 @@ static char big_pool[BIG_BLOCK_WL * BIG_BLOCK_NUM];
 static char med_pool[MED_BLOCK_WL * MED_BLOCK_NUM];
 static char sml_pool[SML_BLOCK_WL * SML_BLOCK_NUM];
 static char tny_pool[TNY_BLOCK_WL * TNY_BLOCK_NUM];
+static char sb_pool[ SINGLE_BYTE_NUM];
 
 static queue big_mqueue;
 static queue med_mqueue;
 static queue sml_mqueue;
 static queue tny_mqueue;
+static queue sb_mqueue;
 
 static void *big_q_buf[BIG_BLOCK_NUM + 1];
 static void *med_q_buf[MED_BLOCK_NUM + 1];
 static void *sml_q_buf[SML_BLOCK_NUM + 1];
 static void *tny_q_buf[TNY_BLOCK_NUM + 1];
+static void *sb_q_buf[SINGLE_BYTE_NUM + 1];
 
 
 volatile static uint32_t alloc_count_sml = 0;
@@ -38,6 +41,7 @@ void pools_init()
 	init_queue(&med_mqueue, (void*)(med_q_buf), MED_BLOCK_NUM + 1);
 	init_queue(&sml_mqueue, (void*)(sml_q_buf), SML_BLOCK_NUM + 1);
 	init_queue(&tny_mqueue, (void*)(tny_q_buf), TNY_BLOCK_NUM + 1);
+	init_queue(&sb_mqueue,  (void*)(sb_q_buf),  SINGLE_BYTE_NUM + 1);
 	//break each up buffer into blocks, add to free memory pointer queues
 	void *i;
 	uint32_t k = 0;
@@ -58,6 +62,11 @@ void pools_init()
 	k = 0;
 	for(i=tny_pool;k < TNY_BLOCK_NUM;i+=TNY_BLOCK_WL){
 		enqueue(&tny_mqueue,i);
+		++k;
+	}
+	k = 0;
+	for(i=sb_pool;k < SINGLE_BYTE_NUM; i+=1){
+		enqueue(&sb_mqueue,i);
 		++k;
 	}
 	return;
@@ -82,6 +91,9 @@ void * b_alloc(uint32_t size)
 	case TNY_BLOCK_WL:
 		++alloc_count_tny;
 		b = dequeue(&tny_mqueue);
+		break;
+	case 1:
+		b = dequeue(&sb_mqueue);
 		break;
 	default:
 		break;
@@ -115,6 +127,9 @@ uint32_t b_free(void *p, uint32_t size)
 	case TNY_BLOCK_WL:
 		e = enqueue(&tny_mqueue, p);
 		break;
+	case 1:
+		e = enqueue(&sb_mqueue, p);
+		break;
 	default:
 		e = 1;
 	}
@@ -130,11 +145,7 @@ wbuff *alloc_wbuff(uint32_t l)
 	/*Some checks necessary to ensure that the block size is not too small
 	 *for the minimal wbuff
 	 */
-	if(l > 4){
-		b = (wbuff*)b_alloc(sizeof(wbuff));
-	}else{
-		b = 0;
-	}
+	b = (wbuff*)b_alloc(sizeof(wbuff));
 	if(b){
 		b->length = l;
 		b->buff = b_alloc(l);

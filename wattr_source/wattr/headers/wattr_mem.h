@@ -8,8 +8,8 @@
 #include "mem/wattr_queue.h"
 #include "mem/wattr_alloc.h"
 
-#define	ADE_RXBUFF_DPTH	10
-#define ADE_TXBUFF_DPTH 10
+#define	ADE_RXBUFF_DPTH	2
+#define ADE_TXBUFF_DPTH 2
 
 #define	SCREEN_WRBUFF_DPTH 5
 #define	SCREEN_WRBUFF_WL	MED_BLOCK_WL
