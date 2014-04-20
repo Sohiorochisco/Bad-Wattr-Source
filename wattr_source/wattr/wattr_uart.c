@@ -8,7 +8,7 @@
 #include "headers/pdc_periph.h"
 #include "headers/wattr_mem.h"
 /////////UART SPECIFIC DEFINES///////////////////
-#define WATTR_UART_BAUD 9600 //9600 baud
+#define WATTR_UART_BAUD 19200 //9600 baud
 #define WATTR_UART_RX_DPTH 0x4
 #define WATTR_UART_TX_DPTH 0x2
 
@@ -54,7 +54,7 @@ static void config_uart(void)
 	//Find correct divider value to generate baud-rate.
 	UART0->UART_BRGR = (uint32_t)(SystemCoreClock/(WATTR_UART_BAUD *16));
 	//Set the UART mode to Normal, with no parity bit
-	UART0->UART_MR = UART_MR_CHMODE_NORMAL | UART_MR_PAR_NO;
+	UART0->UART_MR = UART_MR_CHMODE_NORMAL | UART_MR_PAR_EVEN;
 	//Enable interrupt for end of receive transfer
 	UART0->UART_IER = UART_IER_ENDRX;
 	//Enable transmitter and receiver
@@ -101,7 +101,7 @@ void make_rs232_driver(pdc_periph *rs232)
 void service_uart(void)
 {
 	//Only service if the TX PDC channel is inactive
-	if(UART0->UART_SR & UART_SR_TXBUFE){
+	if(UART0->UART_SR & UART_SR_ENDTX){
 		if(uart_tx_buff){
 			free_wbuff(uart_tx_buff);
 			uart_tx_buff = 0;
@@ -109,9 +109,9 @@ void service_uart(void)
 		wbuff *tx_wb = dequeue(&wattr_uart_tx_queue); //wbuff to transmit
 		if(tx_wb){
 			uart_tx_buff = tx_wb;
-			PDC_UART0->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)(uart_tx_buff->buff));
+			PDC_UART0->PERIPH_TPR = PERIPH_TPR_TXPTR((uint32_t)(tx_wb->buff));
 			//Begins transmission
-			PDC_UART0->PERIPH_TCR = PERIPH_TCR_TXCTR(uart_tx_buff->length);
+			PDC_UART0->PERIPH_TCR = PERIPH_TCR_TXCTR(tx_wb->length);
 		}
 	}
 	return;

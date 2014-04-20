@@ -7,6 +7,12 @@
 #include "headers/wattr_mem.h"
 #include "sam.h"
 
+#define PERIPH_IRQS(FUNC)\
+	do{\
+	FUNC(SPI_IRQn);\
+	FUNC(UART0_IRQn);\
+	}while(0)
+	
 //static allocation for each of the memory pools
 static char big_pool[BIG_BLOCK_WL * BIG_BLOCK_NUM];
 static char med_pool[MED_BLOCK_WL * MED_BLOCK_NUM];
@@ -74,8 +80,7 @@ void pools_init()
 
 void * b_alloc(uint32_t size)
 {
-	NVIC_DisableIRQ(UART0_IRQn);
-	NVIC_DisableIRQ(SPI_IRQn);
+	PERIPH_IRQS(NVIC_DisableIRQ);
 	char *b = 0;
 	switch(size){
 	case BIG_BLOCK_WL:
@@ -98,9 +103,7 @@ void * b_alloc(uint32_t size)
 	default:
 		break;
 	}
-	//Will replace with macro soon
-	NVIC_EnableIRQ(UART0_IRQn);
-	NVIC_EnableIRQ(SPI_IRQn);
+	PERIPH_IRQS(NVIC_EnableIRQ);
 	if(b == 0){
 		//For debug use only, remove during normal use
 		out_of_mem_assert();
@@ -111,8 +114,7 @@ void * b_alloc(uint32_t size)
 
 uint32_t b_free(void *p, uint32_t size)
 {
-	NVIC_DisableIRQ(UART0_IRQn);
-	NVIC_DisableIRQ(SPI_IRQn);
+	PERIPH_IRQS(NVIC_DisableIRQ);
 	uint32_t e = 1;
 	switch(size){
 	case BIG_BLOCK_WL:
@@ -133,8 +135,7 @@ uint32_t b_free(void *p, uint32_t size)
 	default:
 		e = 1;
 	}
-	NVIC_EnableIRQ(UART0_IRQn);
-	NVIC_EnableIRQ(SPI_IRQn);
+	PERIPH_IRQS(NVIC_EnableIRQ);
 	return e;
 }
 
@@ -142,25 +143,26 @@ wbuff *alloc_wbuff(uint32_t l)
 {
 	++alloc_count_wbuff;
 	wbuff *b;
-	/*Some checks necessary to ensure that the block size is not too small
-	 *for the minimal wbuff
-	 */
+	PERIPH_IRQS(NVIC_DisableIRQ);
 	b = (wbuff*)b_alloc(sizeof(wbuff));
 	if(b){
 		b->length = l;
 		b->buff = b_alloc(l);
 	}
+	PERIPH_IRQS(NVIC_EnableIRQ);
 	return b;
 }
 
 uint32_t free_wbuff(wbuff *oldbuff)
 {
+	PERIPH_IRQS(NVIC_DisableIRQ);
 	uint32_t st = 4;
 	if(oldbuff){
 		uint32_t l = oldbuff->length;
 		st = b_free(oldbuff->buff,l);
 		st += b_free(oldbuff,sizeof(wbuff));
 	}
+	PERIPH_IRQS(NVIC_EnableIRQ);
 	return st;
 }
 

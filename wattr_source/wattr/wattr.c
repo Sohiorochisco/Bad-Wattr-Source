@@ -91,12 +91,12 @@ int main(void)
 				do{
 					er = periph_write_buff(WATTR_UART_PID,dat_word);
 				}while(er);
-				term_word = lp_alloc_wbuff(1);
-				term_word->buff[0] = 0xA;
-				do {
-					er = periph_write_buff(WATTR_UART_PID,term_word);
-				} while (er);
-				term_word = 0;
+//				term_word = lp_alloc_wbuff(1);
+//				term_word->buff[0] = 0xA;
+//				do {
+//					er = periph_write_buff(WATTR_UART_PID,term_word);
+//				} while (er);
+//				term_word = 0;
 		}
 		
 		lp_free_wbuff(comm_word);

@@ -3,7 +3,10 @@
 #include "sam.h"
 #include "headers/wattr_pio.h"
 #include "headers/pdc_periph.h"
-#define ZX_WRD_LNGTH MED_BLOCK_WL;
+
+#define ZX_WRD_LNGTH MED_BLOCK_WL
+//Used to account for the mismatch between the tx and rx buffers
+#define SPI_RX_OFFSET 0
 //Used to indicate the current type of buffer being transferred
 enum spiwd{
 	IRQ_WRD,
@@ -30,11 +33,12 @@ static struct ade_fl ade_flags;
 
 /*Standard write for IRQ interrupt from ADE7753*/
 static uint8_t irq_wr[] = {
-	ADE_REG_AENERGY,0x00,0x00,0x00,ADE_REG_RAENERGY,0x00,0x00,0x00
+	0x00,ADE_REG_AENERGY,0x00,0x00,0x00,ADE_REG_RAENERGY,0x00,0x00,0x00,
+	0x00,0x00,0x00
 };
 static uint8_t zx_wr[] = {
-	ADE_REG_VRMS,0x00,0x00,0x00,ADE_REG_IRMS,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,			0x00,0x00,0x00,0x00
+	0x00,ADE_REG_VRMS,0x00,0x00,0x00,ADE_REG_IRMS,0x00,0x00,0x00,
+	0x00,0x00,0x00
 };
 
 /*Static buffer for a single register write*/
@@ -48,13 +52,14 @@ static void config_spi(void)
 	PMC->PMC_PCER0 = PMC_PCER0_PID19;
 	//reset the channel
 	SPI->SPI_CR = SPI_CR_SWRST | SPI_CR_SPIDIS;
-	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(120);
+	/* Set clock phase and polarity for the ADE7753 chip select*/
+	SPI->SPI_CSR[1] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA) & 
+	~(SPI_CSR_SCBR_Msk) & ~(SPI_CSR_DLYBCT_Msk);
+	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(32) | SPI_CSR_DLYBCT(16);
 	/*Ensure that the spi channel is in master mode, and
 	 *choose chip select channel zero */
 	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(13) | 
 		SPI_MR_MODFDIS | SPI_MR_WDRBT;
-	/* Set clock phase and polarity for the ADE7753 chip select*/
-	SPI->SPI_CSR[1] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA);
 	//Enable tranceiver
 	SPI->SPI_CR = SPI_CR_SPIDIS;
 	//Disable PDC
@@ -69,12 +74,14 @@ static void config_spi(void)
 //Begins spi transmission
 static inline void spi_transfer_wbuff(wbuff *wbp,wbuff *rwbp)
 {
+	SPI->SPI_CR				= SPI_CR_SPIDIS;
+	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
 	PDC_SPI->PERIPH_TPR		= PERIPH_TPR_TXPTR((uint32_t)((wbp->buff)));
 	PDC_SPI->PERIPH_RPR		= PERIPH_RPR_RXPTR((uint32_t)((rwbp->buff)));
 	PDC_SPI->PERIPH_RCR		= PERIPH_RCR_RXCTR(wbp->length);
 	PDC_SPI->PERIPH_TCR		= PERIPH_TCR_TXCTR(wbp->length);
 	SPI->SPI_CSR[1]			&= ~(SPI_CSR_CSNAAT);
-	SPI->SPI_IER			= SPI_IER_ENDTX;
+	SPI->SPI_IER			= SPI_IER_ENDRX;
 	SPI->SPI_CR				= SPI_CR_SPIEN;
 	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
 }
@@ -155,12 +162,10 @@ static void comms_rxend_handler(void)
 	}
 	if (tx_wr && rx_wr){
 		uint32_t i = 0;
-		//for(; i < rx_wr->length;i+=4){
+		//for(i = SPI_RX_OFFSET; i < rx_wr->length;i+=4){
 			//combine the register addresses with contents
-			//rx_wr->buff[i] = tx_wr->buff[i];
+		//	rx_wr->buff[i] = tx_wr->buff[i];
 		//}
-		//rx_wr->buff[0] = 0;
-		//rx_wr->buff[0] = 0;
 		uint32_t st = enqueue(&ade_rx_queue,rx_wr);
 		if(st){
 			free_wbuff(rx_wr);
@@ -179,9 +184,9 @@ static void comms_rxend_handler(void)
 
 void SPI_Handler(void)
 {
-	if(SPI->SPI_SR &SPI_SR_ENDTX){
+	if(SPI->SPI_SR & SPI_SR_ENDRX){
 		comms_rxend_handler();
-		SPI->SPI_IDR = SPI_IDR_ENDTX;
+		SPI->SPI_IDR = SPI_IDR_ENDRX;
 	}
 	NVIC_ClearPendingIRQ(PIOC_IRQn);
 	return;
@@ -222,5 +227,16 @@ void service_ade(void)
 			}
 		}
 	}
+	return;
+}
+
+//used to format a register write to the ade7753
+void write_ade_reg(uint8_t  *b,uint32_t wrd,uint8_t reg, uint32_t wl)
+{
+	uint32_t shft_wrd = wrd <<(24 % wl);
+	b[0] = reg | ADE_WRITE_MASK;
+	b[1] = (uint8_t)shft_wrd >> 16;
+	b[2] = (uint8_t)((shft_wrd << 8) >> 16);
+	b[3] = (uint8_t)((shft_wrd << 16) >> 16);
 	return;
 }
