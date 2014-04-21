@@ -17,14 +17,12 @@ typedef struct{
 	uint32_t (*write)(wbuff *w);
 }pdc_periph;
 
-/*constructor for ade7753 spi pdc interface*/
-//void make_ade7753_driver(pdc_periph *ade);
+/*constructor for spi interface, for the screen and the ade7753*/
+void make_spi_driver(pdc_periph *ade_configure, pdc_periph *ade_zxread,
+pdc_periph * ade_irqread,pdc_periph *screen);
 
 /*constructor for rs232 uart pdc interface */
 void make_rs232_driver(pdc_periph *rs232);
-
-void make_ade7753_driver(pdc_periph *ade_driver);
-
 
 /*These functions are called from the system timer interrupt
  *handler, in order to read from the peripheral write queues */

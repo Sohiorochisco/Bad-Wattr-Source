@@ -4,6 +4,8 @@
 #include "headers/wattr_pio.h"
 #include "headers/pdc_periph.h"
 
+#define SCREEN_CHIP_SLCT 2
+#define SCREEN_TXBUFF_DPTH 4
 #define ZX_WRD_LNGTH MED_BLOCK_WL
 //Used to account for the mismatch between the tx and rx buffers
 #define SPI_RX_OFFSET 0
@@ -12,6 +14,7 @@ enum spiwd{
 	IRQ_WRD,
 	ZX_WRD,
 	COM_WRD,
+	SCRN_WRD,
 	NONE
 	};
 
@@ -20,10 +23,14 @@ static wbuff *ade_rx_buff = 0;
 static wbuff *ade_zxrx_buff = 0;
 static wbuff *ade_irqrx_buff = 0;
 /*received buffer queue struct*/
-static queue ade_rx_queue;
+static queue ade_zxrx_queue;
+static queue ade_irqrx_queue;
 static queue ade_tx_queue;
-static void *rxq_buff[ADE_RXBUFF_DPTH];
-static void *txq_buff[ADE_TXBUFF_DPTH];
+static queue screen_tx_queue;
+static void *screen_txq_buff[SCREEN_TXBUFF_DPTH];
+static void *ade_irqrxq_buff[ADE_RXBUFF_DPTH];
+static void *ade_zxrxq_buff[ADE_RXBUFF_DPTH];
+static void *ade_txq_buff[ADE_TXBUFF_DPTH];
 
 //used to indicate current status 
 struct ade_fl{
@@ -41,8 +48,8 @@ static uint8_t zx_wr[] = {
 	0x00,0x00,0x00
 };
 
-/*Static buffer for a single register write*/
-static wbuff *ade_com_buff;
+/*Static buffers for one-off ade transfers or screen writes*/
+static wbuff *spi_tx_buff;
 static wbuff ade_zx_buff;
 static wbuff ade_irq_buff;
 
@@ -72,25 +79,38 @@ static void config_spi(void)
 }
 
 //Begins spi transmission
-static inline void spi_transfer_wbuff(wbuff *wbp,wbuff *rwbp)
+static inline void spi_transfer_wbuff(wbuff *wbp,wbuff *rwbp,uint32_t chp_sel)
 {
 	SPI->SPI_CR				= SPI_CR_SPIDIS;
 	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
+	SPI->SPI_MR				&= ~(SPI_MR_PCS_Msk);
+	//Switch the the correct chip select
+	SPI->SPI_MR				|= SPI_MR_PCS( 0x1u << chp_sel);
 	PDC_SPI->PERIPH_TPR		= PERIPH_TPR_TXPTR((uint32_t)((wbp->buff)));
 	PDC_SPI->PERIPH_RPR		= PERIPH_RPR_RXPTR((uint32_t)((rwbp->buff)));
 	PDC_SPI->PERIPH_RCR		= PERIPH_RCR_RXCTR(wbp->length);
 	PDC_SPI->PERIPH_TCR		= PERIPH_TCR_TXCTR(wbp->length);
-	SPI->SPI_CSR[1]			&= ~(SPI_CSR_CSNAAT);
+	SPI->SPI_CSR[chp_sel]			&= ~(SPI_CSR_CSNAAT);
 	SPI->SPI_IER			= SPI_IER_ENDRX;
 	SPI->SPI_CR				= SPI_CR_SPIEN;
 	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
 }
 
-wbuff *ade_read(void)
+wbuff *ade_irq_read(void)
 {
 	//Disable the enqueueing interrupt
 	NVIC_DisableIRQ(SPI_IRQn);
-	wbuff *wb = dequeue(&ade_rx_queue);
+	wbuff *wb = dequeue(&ade_irqrx_queue);
+	//Re-enable the rx interupt
+	NVIC_EnableIRQ(SPI_IRQn);
+	return wb;
+}
+
+wbuff *ade_zx_read(void)
+{
+	//Disable the enqueueing interrupt
+	NVIC_DisableIRQ(SPI_IRQn);
+	wbuff *wb = dequeue(&ade_zxrx_queue);
 	//Re-enable the rx interupt
 	NVIC_EnableIRQ(SPI_IRQn);
 	return wb;
@@ -105,7 +125,17 @@ uint32_t ade_write(wbuff *wrd)
 	return st;
 }
 
-void make_ade7753_driver(pdc_periph *ade_driver)
+uint32_t screen_write(wbuff *wrd)
+{
+	//Disable dequeueing interrupt
+	NVIC_DisableIRQ(SPI_IRQn);
+	uint32_t st = enqueue(&screen_tx_queue,wrd);
+	NVIC_EnableIRQ(SPI_IRQn);
+	return st;
+}
+
+void make_spi_driver(pdc_periph *ade_configure, pdc_periph *ade_zxread,
+						pdc_periph * ade_irqread,pdc_periph *screen)
 {
 	ade_zx_buff.buff = zx_wr;
 	ade_zx_buff.length = ZX_WRD_LNGTH;
@@ -113,11 +143,18 @@ void make_ade7753_driver(pdc_periph *ade_driver)
 	ade_irq_buff.length = TNY_BLOCK_WL;
 	//Set all flags to zero (because you never know...)
 	ade_flags.spiwrd = NONE;
-	init_queue(&ade_rx_queue,rxq_buff,ADE_RXBUFF_DPTH);
-	init_queue(&ade_tx_queue,txq_buff,ADE_TXBUFF_DPTH);
+	init_queue(&ade_zxrx_queue,ade_zxrxq_buff,ADE_RXBUFF_DPTH);
+	init_queue(&ade_irqrx_queue,ade_irqrxq_buff,ADE_RXBUFF_DPTH);
+	init_queue(&ade_tx_queue,ade_txq_buff,ADE_TXBUFF_DPTH);
+	init_queue(&screen_tx_queue,screen_txq_buff,SCREEN_TXBUFF_DPTH);
 	config_spi();
-	ade_driver->read  = &ade_read;
-	ade_driver->write = &ade_write;
+	ade_configure->read  = 0;
+	ade_configure->write = &ade_write;
+	ade_irqread->read = &ade_irq_read;
+	ade_irqread->write = 0;
+	ade_zxread->read = &ade_zx_read;
+	ade_zxread->write = 0;
+	screen->write = &screen_write;
 	ade_irqrx_buff = alloc_wbuff(TNY_BLOCK_WL);
 	ade_zxrx_buff = alloc_wbuff(TNY_BLOCK_WL);
 	return;
@@ -129,56 +166,34 @@ static void comms_rxend_handler(void)
 	SPI->SPI_CSR[1] |= SPI_CSR_CSNAAT;
 	PDC_SPI->PERIPH_PTCR |= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
 	SPI->SPI_CR = SPI_CR_SPIDIS;
-	wbuff *tx_wr = 0;
 	wbuff *rx_wr = 0;
+	uint32_t st = 0;
 	switch(ade_flags.spiwrd){
 	case IRQ_WRD:
-		tx_wr = &ade_irq_buff;
 		rx_wr = ade_irqrx_buff;
-		ade_irqrx_buff = alloc_wbuff(TNY_BLOCK_WL);
+		ade_irqrx_buff = alloc_wbuff(ade_irq_buff.length);
+		st = enqueue(&ade_irqrx_queue,rx_wr);
 		break;
 	case ZX_WRD:
-		tx_wr = &ade_zx_buff;
 		rx_wr = ade_zxrx_buff;
 		ade_zxrx_buff = alloc_wbuff(ade_zx_buff.length);
+		st = enqueue(&ade_zxrx_queue,rx_wr);
 		break;
+	case SCRN_WRD:
 	case COM_WRD:
-		if(ade_com_buff){
-			uint8_t wr_check = ade_com_buff->buff[0] & ADE_WRITE_MASK;
-			if(wr_check){
-				free_wbuff(ade_rx_buff);
-				ade_rx_buff = 0;
-			}else{
-				tx_wr = ade_com_buff;
-				rx_wr = ade_rx_buff;
-				ade_rx_buff = 0;
-			}
-			free_wbuff(ade_com_buff);
-			ade_com_buff = 0;
+		if(ade_rx_buff){
+			free_wbuff(ade_rx_buff);
+		}
+		if(spi_tx_buff){
+			free_wbuff(spi_tx_buff);
+			spi_tx_buff = 0;
 		}
 		break;
 	case NONE: break;
 	default: break;
 	}
-	if (tx_wr && rx_wr){
-		uint32_t i = 0;
-		//for(i = SPI_RX_OFFSET; i < rx_wr->length;i+=4){
-			//combine the register addresses with contents
-		//	rx_wr->buff[i] = tx_wr->buff[i];
-		//}
-		uint32_t st = enqueue(&ade_rx_queue,rx_wr);
-		if(st){
-			free_wbuff(rx_wr);
-		}
-		rx_wr = 0;
-		if (ade_flags.spiwrd == COM_WRD){
-			free_wbuff(tx_wr);
-		}
-		tx_wr = 0;
-	}
-	if(tx_wr || rx_wr){
-		//Not the right assertion per-say, but something is clearly wrong.
-		out_of_mem_assert();
+	if(st){
+		free_wbuff(rx_wr);
 	}
 }
 
@@ -196,7 +211,7 @@ void ade_irq_handler(void)
 {
 	if(SPI->SPI_SR & SPI_SR_TXBUFE){
 		ade_flags.spiwrd = IRQ_WRD;
-		spi_transfer_wbuff(&ade_irq_buff,ade_irqrx_buff);
+		spi_transfer_wbuff(&ade_irq_buff,ade_irqrx_buff,1);
 	}
 	return;
 }
@@ -204,7 +219,7 @@ void ade_zx_handler(void)
 {
 	if(SPI->SPI_SR & SPI_SR_TXBUFE){
 		ade_flags.spiwrd = ZX_WRD;
-		spi_transfer_wbuff(&ade_zx_buff,ade_zxrx_buff);
+		spi_transfer_wbuff(&ade_zx_buff,ade_zxrx_buff,1);
 		NVIC_ClearPendingIRQ(PIOC_IRQn);
 	}
 }
@@ -216,14 +231,27 @@ void service_ade(void)
 		//see if there is a pending com write
 		tx_wb = dequeue(&ade_tx_queue);
 		if(tx_wb){
-			wbuff *rxnext = alloc_wbuff(tx_wb->length);
-			if(rxnext){
+			ade_rx_buff = alloc_wbuff(tx_wb->length);
+			if(ade_rx_buff){
 				ade_flags.spiwrd = COM_WRD;
-				ade_rx_buff = rxnext;
-				ade_com_buff = tx_wb;
-				spi_transfer_wbuff(tx_wb,ade_rx_buff);
+				spi_tx_buff = tx_wb;
+				spi_transfer_wbuff(tx_wb,ade_rx_buff,1);
 			}else{
 				ade_flags.spiwrd = NONE;
+				free_wbuff(tx_wb);
+			}
+		}else{
+			tx_wb = dequeue(&screen_tx_queue);
+		}
+		if(tx_wb){
+			ade_rx_buff = alloc_wbuff(tx_wb->length);
+			if(ade_rx_buff){
+				ade_flags.spiwrd = SCRN_WRD;
+				spi_tx_buff = tx_wb;
+				spi_transfer_wbuff(tx_wb,ade_rx_buff,SCREEN_CHIP_SLCT);
+			}else{
+				ade_flags.spiwrd = NONE;
+				free_wbuff(tx_wb);
 			}
 		}
 	}

@@ -11,7 +11,10 @@
 #define SYS_SERVICE_PERIOD 500
 
 static pdc_periph wattr_uart;
-static pdc_periph wattr_ade;
+static pdc_periph wattr_ade_zx;
+static pdc_periph wattr_ade_irq;
+static pdc_periph wattr_ade_config;
+static pdc_periph wattr_screen;
 
 //Services that should execute every time that 
 #define WATTR_SERVICES(XXX)\
@@ -21,7 +24,10 @@ static pdc_periph wattr_ade;
 	
 #define WATTR_PERIPHS(XXX)\
 	XXX(wattr_uart)\
-	XXX(wattr_ade)\
+	XXX(wattr_ade_config)\
+	XXX(wattr_ade_irq)\
+	XXX(wattr_ade_zx)\
+	XXX(wattr_screen)\
 	0
 	
 #define POINTER_LIST(a) &a ,
@@ -90,7 +96,7 @@ void wattr_sys_init(void)
 		pio_config();
 		//Initialize UART driver structures, implement API
 		make_rs232_driver(&wattr_uart);
-		make_ade7753_driver(&wattr_ade);
+		make_spi_driver(&wattr_ade_config,&wattr_ade_zx,&wattr_ade_irq,&wattr_screen);
 		config_systime();
 		return;	
 }
