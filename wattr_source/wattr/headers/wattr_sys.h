@@ -11,7 +11,9 @@
 #define WATTR_SYS
 #include "pdc_periph.h"
 
-#define WATTR_ADE_PID 1
+#define WATTR_ADE
+#define WATTR_ADE_ZX_PID
+#define WATTR_ADE_CONFIG_PID 1
 #define WATTR_UART_PID 0
 //Used to initialize the background processes that service peripherals
  void wattr_sys_init(void);
