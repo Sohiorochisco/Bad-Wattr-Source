@@ -24,12 +24,15 @@ pdc_periph * ade_irqread,pdc_periph *screen);
 /*constructor for rs232 uart pdc interface */
 void make_rs232_driver(pdc_periph *rs232);
 
+/*constructor for the TWI (I2C) interface */
+void make_twi_drivers(pdc_periph *fanctrl_driver);
+
 /*These functions are called from the system timer interrupt
  *handler, in order to read from the peripheral write queues */
 void service_ade(void);
 
 void service_uart(void);
 
-//void service_twi(void;
+void service_twi(void);
 
 #endif

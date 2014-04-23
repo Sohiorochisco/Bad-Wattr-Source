@@ -15,11 +15,13 @@ static pdc_periph wattr_ade_zx;
 static pdc_periph wattr_ade_irq;
 static pdc_periph wattr_ade_config;
 static pdc_periph wattr_screen;
+static pdc_periph wattr_fan_ctrl;
 
 //Services that should execute every time that 
 #define WATTR_SERVICES(XXX)\
 	XXX(service_ade)\
 	XXX(service_uart)\
+	XXX(service_twi)\
 	0
 	
 #define WATTR_PERIPHS(XXX)\
@@ -28,6 +30,7 @@ static pdc_periph wattr_screen;
 	XXX(wattr_ade_irq)\
 	XXX(wattr_ade_zx)\
 	XXX(wattr_screen)\
+	XXX(wattr_fan_ctrl)\
 	0
 	
 #define POINTER_LIST(a) &a ,
@@ -97,6 +100,7 @@ void wattr_sys_init(void)
 		//Initialize UART driver structures, implement API
 		make_rs232_driver(&wattr_uart);
 		make_spi_driver(&wattr_ade_config,&wattr_ade_zx,&wattr_ade_irq,&wattr_screen);
+		make_twi_drivers(&wattr_fan_ctrl);
 		config_systime();
 		return;	
 }

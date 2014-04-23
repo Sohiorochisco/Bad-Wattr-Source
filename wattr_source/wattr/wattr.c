@@ -13,6 +13,7 @@
 #include "headers/wattr_pio.h"
 #include "headers/wattr_sys.h"
 #include "headers/ade7753.h"
+#include "headers/fan_controller.h"
 
 static volatile uint32_t test_lock = 0;
 void wattr_strcpy(uint8_t *buff, uint8_t *str)
@@ -54,6 +55,10 @@ int main(void)
 	//periph_write_buff(WATTR_ADE_PID,mode_conf1);
 	//periph_write_buff(WATTR_ADE_PID,mode_conf2);
 	//periph_write_buff(WATTR_ADE_PID,mode_conf3);
+	wbuff *test_i2c = lp_alloc_wbuff(TNY_BLOCK_WL);
+	test_i2c->buff[0] = FC_REG_CONFIG_BYTE;
+	test_i2c->buff[1] = 0x1A;
+	periph_write_buff(WATTR_FAN_CTRL_PID,test_i2c);
     while (1) {
 		test_word = periph_read_buff(WATTR_UART_PID);
 		if(test_word){
@@ -73,7 +78,7 @@ int main(void)
 			test_word = 0;	
 		}
 		while(!comm_word){
-			comm_word = periph_read_buff(WATTR_ADE_PID);
+			comm_word = periph_read_buff(WATTR_ADE_ZX_PID);
 			//for(indexer = 0; indexer <= 200; ++indexer);
 		}
 //		if(count == 10){

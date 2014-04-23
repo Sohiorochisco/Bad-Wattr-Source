@@ -4,8 +4,8 @@
 #include "headers/wattr_pio.h"
 #include "headers/pdc_periph.h"
 
-#define SCREEN_CHIP_SLCT 2
-#define SCREEN_TXBUFF_DPTH 4
+#define RELAY_CONTR_CS 2
+#define RELAY_CONTR_TXBUFF_DPTH 4
 #define ZX_WRD_LNGTH MED_BLOCK_WL
 //Used to account for the mismatch between the tx and rx buffers
 #define SPI_RX_OFFSET 0
@@ -19,15 +19,15 @@ enum spiwd{
 	};
 
 /*Pointer to ADE7753 received data buffer */
-static wbuff *ade_rx_buff = 0;
-static wbuff *ade_zxrx_buff = 0;
-static wbuff *ade_irqrx_buff = 0;
+static wbuff *ade_rx_buff;
+static wbuff *ade_zxrx_buff;
+static wbuff *ade_irqrx_buff;
 /*received buffer queue struct*/
 static queue ade_zxrx_queue;
 static queue ade_irqrx_queue;
 static queue ade_tx_queue;
 static queue screen_tx_queue;
-static void *screen_txq_buff[SCREEN_TXBUFF_DPTH];
+static void *screen_txq_buff[RELAY_CONTR_TXBUFF_DPTH];
 static void *ade_irqrxq_buff[ADE_RXBUFF_DPTH];
 static void *ade_zxrxq_buff[ADE_RXBUFF_DPTH];
 static void *ade_txq_buff[ADE_TXBUFF_DPTH];
@@ -146,7 +146,7 @@ void make_spi_driver(pdc_periph *ade_configure, pdc_periph *ade_zxread,
 	init_queue(&ade_zxrx_queue,ade_zxrxq_buff,ADE_RXBUFF_DPTH);
 	init_queue(&ade_irqrx_queue,ade_irqrxq_buff,ADE_RXBUFF_DPTH);
 	init_queue(&ade_tx_queue,ade_txq_buff,ADE_TXBUFF_DPTH);
-	init_queue(&screen_tx_queue,screen_txq_buff,SCREEN_TXBUFF_DPTH);
+	init_queue(&screen_tx_queue,screen_txq_buff,RELAY_CONTR_TXBUFF_DPTH);
 	config_spi();
 	ade_configure->read  = 0;
 	ade_configure->write = &ade_write;
@@ -248,7 +248,7 @@ void service_ade(void)
 			if(ade_rx_buff){
 				ade_flags.spiwrd = SCRN_WRD;
 				spi_tx_buff = tx_wb;
-				spi_transfer_wbuff(tx_wb,ade_rx_buff,SCREEN_CHIP_SLCT);
+				spi_transfer_wbuff(tx_wb,ade_rx_buff,RELAY_CONTR_CS);
 			}else{
 				ade_flags.spiwrd = NONE;
 				free_wbuff(tx_wb);
