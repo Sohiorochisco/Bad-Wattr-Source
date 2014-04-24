@@ -220,6 +220,7 @@ void ade_zx_handler(void)
 	if(SPI->SPI_SR & SPI_SR_TXBUFE){
 		ade_flags.spiwrd = ZX_WRD;
 		spi_transfer_wbuff(&ade_zx_buff,ade_zxrx_buff,1);
+		sample_period();
 		NVIC_ClearPendingIRQ(PIOC_IRQn);
 	}
 }

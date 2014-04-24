@@ -35,4 +35,7 @@ void service_uart(void);
 
 void service_twi(void);
 
+//Reads period and performs linear regression to determine frequency
+void sample_period(void);
+
 #endif
