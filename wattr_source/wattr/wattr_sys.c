@@ -14,8 +14,10 @@ static pdc_periph wattr_uart;
 static pdc_periph wattr_ade_zx;
 static pdc_periph wattr_ade_irq;
 static pdc_periph wattr_ade_config;
-static pdc_periph wattr_screen;
+static pdc_periph wattr_rlydvr;
 static pdc_periph wattr_fan_ctrl;
+static pdc_periph wattr_periodmsr;
+static pdc_periph wattr_caprelays;
 
 //Services that should execute every time that 
 #define WATTR_SERVICES(XXX)\
@@ -29,8 +31,10 @@ static pdc_periph wattr_fan_ctrl;
 	XXX(wattr_ade_config)\
 	XXX(wattr_ade_irq)\
 	XXX(wattr_ade_zx)\
-	XXX(wattr_screen)\
+	XXX(wattr_rlydvr)\
 	XXX(wattr_fan_ctrl)\
+	XXX(wattr_periodmsr)\
+	XXX(wattr_caprelays)\
 	0
 	
 #define POINTER_LIST(a) &a ,
@@ -68,6 +72,13 @@ uint32_t lp_free_wbuff(wbuff *wb){
 	return st;
 }
 
+/*Method for writing to peripheral which will prevent a systick
+ * from occurring during the write. The only problem with this 
+ * method is that if it is polled, it may prevent the system
+ * clock from advancing, thereby preventing writes and potentially
+ * neglecting the watchdog timer, leading to system reset.
+ * A different implementation may be called for...
+ */
 uint32_t periph_write_buff(uint8_t periph_id,wbuff * wb)
 {
 	if(periph_id < wattr_prph_count){
@@ -99,9 +110,12 @@ void wattr_sys_init(void)
 		pio_config();
 		//Initialize UART driver structures, implement API
 		make_rs232_driver(&wattr_uart);
-		make_spi_driver(&wattr_ade_config,&wattr_ade_zx,&wattr_ade_irq,&wattr_screen);
+		make_spi_driver(&wattr_ade_config,&wattr_ade_zx,&wattr_ade_irq,&wattr_rlydvr);
 		make_twi_drivers(&wattr_fan_ctrl);
+		make_tc_driver(&wattr_periodmsr);
 		config_systime();
+		//turn on power light (show that the DCM isn't too dead)
+		PIOD->PIO_ODSR |= PIO_ODSR_P20;
 		return;	
 }
 

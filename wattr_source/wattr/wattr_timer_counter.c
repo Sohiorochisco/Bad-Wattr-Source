@@ -28,13 +28,15 @@ void sample_period(void)
 	if(sample_count < MAX_SAMPLE){
 		++sample_count;
 	}else{
-		TC0->TC_CHANNEL[0].TC_CV = 0;
+		//reset the counter
+		TC0->TC_CHANNEL[0].TC_CCR |= TC_CCR_SWTRG;
 		sample_count = 0;
 		*(pending_period->buff) = (uint32_t)(sum_of_sq/SUM_SQINT_TO_59);
 		uint32_t st = enqueue(&periods_queue,pending_period);
 		if(st){
 			free_wbuff(pending_period);
 		}
+		sum_of_sq = 0;
 		pending_period = alloc_wbuff(SML_BLOCK_WL);
 	}
 }
@@ -55,6 +57,9 @@ void config_timer_counter(void)
 	TC0->TC_CHANNEL[0].TC_CMR = 0;
 	//Enable the clock
 	TC0->TC_CHANNEL[0].TC_CCR = TC_CCR_CLKEN;
+	if(TC0->TC_CHANNEL[0].TC_SR & TC_SR_CLKSTA){
+		TC0->TC_CHANNEL[0].TC_CCR = TC_CCR_SWTRG;
+	}
 }
 
 
@@ -62,5 +67,8 @@ void make_tc_driver(pdc_periph *tc)
 {
 	init_queue(&periods_queue,tc_buff,TIMER_COUNTER_BUFF_DPTH);
 	pending_period = alloc_wbuff(SML_BLOCK_WL);
+	config_timer_counter();
 	tc->read = &read_period;
+	tc->write = 0; //Doesn't make sense to override the counter...
+	return;
 }

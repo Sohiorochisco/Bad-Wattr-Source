@@ -27,6 +27,9 @@ void make_rs232_driver(pdc_periph *rs232);
 /*constructor for the TWI (I2C) interface */
 void make_twi_drivers(pdc_periph *fanctrl_driver);
 
+/* constructor for timer counter read-only interface */
+void make_tc_driver(pdc_periph *tc);
+
 /*These functions are called from the system timer interrupt
  *handler, in order to read from the peripheral write queues */
 void service_ade(void);

@@ -11,7 +11,10 @@
 #define WATTR_SYS
 #include "pdc_periph.h"
 
-#define WATTR_FAN_CTRL_PID 4 
+#define WATTR_CAPRELAY_PID 7
+#define WATTR_PERIODMSR_PID 6
+#define WATTR_FAN_CTRL_PID 5
+#define WATTR_RLYDVR_PID 4 
 #define WATTR_ADE_IRQ_PID 2
 #define WATTR_ADE_ZX_PID 3
 #define WATTR_ADE_CONFIG_PID 1
@@ -30,4 +33,7 @@ wbuff * lp_alloc_wbuff(uint32_t size);
 // This ensures that free function is not interrupted by the system clock 
 //handler.
 uint32_t lp_free_wbuff(wbuff *wb);
+
+//Initialize driver for the cap relays (writes directly to GPIO, w/o buffer)
+void make_caprelay_driver(pdc_periph *cr_driver);
 #endif

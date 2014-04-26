@@ -59,6 +59,7 @@ void config_twi(void)
 	TWI0->TWI_CWGR = TWI_CWGR_CHDIV(t_high) | TWI_CWGR_CKDIV(1) | TWI_CWGR_CLDIV(t_low);
 	//enable master mode; disable slave mode
 	TWI0->TWI_CR = TWI_CR_MSEN | TWI_CR_SVDIS;
+	return;
 }
 
 

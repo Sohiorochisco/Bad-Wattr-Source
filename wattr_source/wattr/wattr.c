@@ -37,6 +37,8 @@ int main(void)
 	PIOA->PIO_ODSR &= ~(PIO_ODSR_P25);
 	for(;indexer > 0; --indexer){}
 	PIOA->PIO_ODSR |= PIO_ODSR_P25;
+	PIOD->PIO_SODR = PIO_SODR_P24;
+	PIOD->PIO_CODR = PIO_CODR_P23;
 	uint32_t er = 0;
 	uint32_t count = 0;
 	uint32_t offset = 0;
@@ -45,6 +47,7 @@ int main(void)
 	wbuff *comm_word = 0;
 	wbuff *dat_word = 0;
 	wbuff *term_word = 0;
+	wbuff *period_word = 0;
 	uint32_t st = 0;
 	//wbuff *mode_conf1 = lp_alloc_wbuff(TNY_BLOCK_WL);
 	//wbuff *mode_conf2 = lp_alloc_wbuff(TNY_BLOCK_WL);
@@ -60,52 +63,17 @@ int main(void)
 	test_i2c->buff[1] = 0x1A;
 	periph_write_buff(WATTR_FAN_CTRL_PID,test_i2c);
     while (1) {
-		test_word = periph_read_buff(WATTR_UART_PID);
-		if(test_word){
-			switch(test_word->buff[0]){
-				case 'v':
-					count = CAL_COUNT;
-					offset = 2;
-					break;
-				case 'i':
-					count = CAL_COUNT;
-					offset = 6;
-					break;
-				default:
-					break;			
-			}
-			lp_free_wbuff(test_word);
-			test_word = 0;	
+		count = 0;
+		for(;count < 1000;++count){
+			++count;
 		}
-		while(!comm_word){
-			comm_word = periph_read_buff(WATTR_ADE_ZX_PID);
-			//for(indexer = 0; indexer <= 200; ++indexer);
+		while(!test_word){
+			test_word = periph_read_buff(WATTR_PERIODMSR_PID);
 		}
-//		if(count == 10){
-//			dat_word = lp_alloc_wbuff(SML_BLOCK_WL);
-//			average_point = (uint32_t *)(dat_word->buff);
-//			*average_point = 0;		
-//		}
-		if(count){
-			dat_word = lp_alloc_wbuff(SML_BLOCK_WL);
-			dat_word->buff[0] = 0;
-			dat_word->buff[1] = comm_word->buff[offset];
-			dat_word->buff[2] = comm_word->buff[offset + 1];
-			dat_word->buff[3] = comm_word->buff[offset + 2];
-			--count;
-				do{
-					er = periph_write_buff(WATTR_UART_PID,dat_word);
-				}while(er);
-//				term_word = lp_alloc_wbuff(1);
-//				term_word->buff[0] = 0xA;
-//				do {
-//					er = periph_write_buff(WATTR_UART_PID,term_word);
-//				} while (er);
-//				term_word = 0;
-		}
-		
-		lp_free_wbuff(comm_word);
-		comm_word = 0;
+		do{
+			st = periph_write_buff(WATTR_UART_PID,test_word);
+		}while(st);
+		test_word = 0;
 	}
 }
 

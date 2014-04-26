@@ -4,9 +4,11 @@
 #include "headers/wattr_pio.h"
 #include "headers/pdc_periph.h"
 
+#define ZX_INDICATOR_MASK PIO_PER_P22
 #define RELAY_CONTR_CS 2
 #define RELAY_CONTR_TXBUFF_DPTH 4
 #define ZX_WRD_LNGTH MED_BLOCK_WL
+#define IRQ_WRD_LNGTH MED_BLOCK_WL
 //Used to account for the mismatch between the tx and rx buffers
 #define SPI_RX_OFFSET 0
 //Used to indicate the current type of buffer being transferred
@@ -55,20 +57,23 @@ static wbuff ade_irq_buff;
 
 static void config_spi(void)
 {
+	int csi = 0;
 	//enable the spi clock in the power management controller
 	PMC->PMC_PCER0 = PMC_PCER0_PID19;
 	//reset the channel
 	SPI->SPI_CR = SPI_CR_SWRST | SPI_CR_SPIDIS;
-	/* Set clock phase and polarity for the ADE7753 chip select*/
-	SPI->SPI_CSR[1] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA) & 
-	~(SPI_CSR_SCBR_Msk) & ~(SPI_CSR_DLYBCT_Msk);
-	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(32) | SPI_CSR_DLYBCT(16);
+	for(;csi < 4; ++csi){
+		/* Set clock phase and polarity for the ADE7753 chip select*/
+		SPI->SPI_CSR[csi] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA) & 
+		~(SPI_CSR_SCBR_Msk) & ~(SPI_CSR_DLYBCT_Msk);
+		SPI->SPI_CSR[csi] |=  SPI_CSR_SCBR(32) | SPI_CSR_DLYBCT(16);
+	}
 	/*Ensure that the spi channel is in master mode, and
 	 *choose chip select channel zero */
 	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(13) | 
 		SPI_MR_MODFDIS | SPI_MR_WDRBT;
 	//Enable tranceiver
-	SPI->SPI_CR = SPI_CR_SPIDIS;
+	SPI->SPI_CR = SPI_CR_SPIEN;
 	//Disable PDC
 	PDC_SPI->PERIPH_PTCR |= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
 	SPI->SPI_IDR = 0xffffffff;
@@ -81,17 +86,16 @@ static void config_spi(void)
 //Begins spi transmission
 static inline void spi_transfer_wbuff(wbuff *wbp,wbuff *rwbp,uint32_t chp_sel)
 {
-	SPI->SPI_CR				= SPI_CR_SPIDIS;
 	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
+	SPI->SPI_CR				= SPI_CR_SPIDIS;
 	SPI->SPI_MR				&= ~(SPI_MR_PCS_Msk);
 	//Switch the the correct chip select
-	SPI->SPI_MR				|= SPI_MR_PCS( 0x1u << chp_sel);
+	SPI->SPI_MR				|= SPI_MR_PCS(~(0x1u << chp_sel));
 	PDC_SPI->PERIPH_TPR		= PERIPH_TPR_TXPTR((uint32_t)((wbp->buff)));
 	PDC_SPI->PERIPH_RPR		= PERIPH_RPR_RXPTR((uint32_t)((rwbp->buff)));
 	PDC_SPI->PERIPH_RCR		= PERIPH_RCR_RXCTR(wbp->length);
 	PDC_SPI->PERIPH_TCR		= PERIPH_TCR_TXCTR(wbp->length);
-	SPI->SPI_CSR[chp_sel]			&= ~(SPI_CSR_CSNAAT);
-	SPI->SPI_IER			= SPI_IER_ENDRX;
+	SPI->SPI_IER			= SPI_IER_TXEMPTY;
 	SPI->SPI_CR				= SPI_CR_SPIEN;
 	PDC_SPI->PERIPH_PTCR	= PERIPH_PTCR_RXTEN | PERIPH_PTCR_TXTEN;
 }
@@ -155,28 +159,25 @@ void make_spi_driver(pdc_periph *ade_configure, pdc_periph *ade_zxread,
 	ade_zxread->read = &ade_zx_read;
 	ade_zxread->write = 0;
 	screen->write = &screen_write;
-	ade_irqrx_buff = alloc_wbuff(TNY_BLOCK_WL);
-	ade_zxrx_buff = alloc_wbuff(TNY_BLOCK_WL);
+	ade_irqrx_buff = alloc_wbuff(IRQ_WRD_LNGTH);
+	ade_zxrx_buff = alloc_wbuff(ZX_WRD_LNGTH);
 	return;
 }
 
 //Handler for received memory from the dynamic access memory controller
 static void comms_rxend_handler(void)
 {
-	SPI->SPI_CSR[1] |= SPI_CSR_CSNAAT;
-	PDC_SPI->PERIPH_PTCR |= PERIPH_PTCR_RXTDIS | PERIPH_PTCR_TXTDIS;
-	SPI->SPI_CR = SPI_CR_SPIDIS;
 	wbuff *rx_wr = 0;
 	uint32_t st = 0;
 	switch(ade_flags.spiwrd){
 	case IRQ_WRD:
 		rx_wr = ade_irqrx_buff;
-		ade_irqrx_buff = alloc_wbuff(ade_irq_buff.length);
+		ade_irqrx_buff = alloc_wbuff(IRQ_WRD_LNGTH);
 		st = enqueue(&ade_irqrx_queue,rx_wr);
 		break;
 	case ZX_WRD:
 		rx_wr = ade_zxrx_buff;
-		ade_zxrx_buff = alloc_wbuff(ade_zx_buff.length);
+		ade_zxrx_buff = alloc_wbuff(ZX_WRD_LNGTH);
 		st = enqueue(&ade_zxrx_queue,rx_wr);
 		break;
 	case SCRN_WRD:
@@ -195,13 +196,14 @@ static void comms_rxend_handler(void)
 	if(st){
 		free_wbuff(rx_wr);
 	}
+	NVIC_ClearPendingIRQ(PIOC_IRQn);
 }
 
 void SPI_Handler(void)
 {
-	if(SPI->SPI_SR & SPI_SR_ENDRX){
+	if(SPI->SPI_SR & SPI_SR_TXEMPTY){
 		comms_rxend_handler();
-		SPI->SPI_IDR = SPI_IDR_ENDRX;
+		SPI->SPI_IDR = SPI_SR_TXEMPTY;
 	}
 	NVIC_ClearPendingIRQ(PIOC_IRQn);
 	return;
@@ -209,7 +211,7 @@ void SPI_Handler(void)
 
 void ade_irq_handler(void)
 {
-	if(SPI->SPI_SR & SPI_SR_TXBUFE){
+	if(SPI->SPI_SR & SPI_SR_TXEMPTY){
 		ade_flags.spiwrd = IRQ_WRD;
 		spi_transfer_wbuff(&ade_irq_buff,ade_irqrx_buff,1);
 	}
@@ -217,12 +219,17 @@ void ade_irq_handler(void)
 }
 void ade_zx_handler(void)
 {
-	if(SPI->SPI_SR & SPI_SR_TXBUFE){
+	if(SPI->SPI_SR &SPI_SR_TXEMPTY){
 		ade_flags.spiwrd = ZX_WRD;
 		spi_transfer_wbuff(&ade_zx_buff,ade_zxrx_buff,1);
-		sample_period();
 		NVIC_ClearPendingIRQ(PIOC_IRQn);
 	}
+	sample_period();
+	//toggle the zx indicator LED
+	static uint32_t zx_state = ZX_INDICATOR_MASK;
+	zx_state = ~zx_state;
+	PIOD->PIO_SODR = zx_state & ZX_INDICATOR_MASK;
+	PIOD->PIO_CODR = ~zx_state & ZX_INDICATOR_MASK;  
 }
 
 void service_ade(void)
