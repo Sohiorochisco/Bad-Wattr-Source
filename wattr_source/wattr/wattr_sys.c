@@ -114,6 +114,7 @@ void wattr_sys_init(void)
 		make_twi_drivers(&wattr_fan_ctrl);
 		make_tc_driver(&wattr_periodmsr);
 		config_systime();
+		init_the_init();
 		//turn on power light (show that the DCM isn't too dead)
 		PIOD->PIO_ODSR |= PIO_ODSR_P20;
 		return;	
