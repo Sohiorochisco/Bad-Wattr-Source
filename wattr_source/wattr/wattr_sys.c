@@ -8,6 +8,8 @@
 #include "headers/pdc_periph.h"
 #include "headers/wattr_mem.h"
 #include "headers/wattr_pio.h"
+#include "headers/wattr_sys.h"
+
 #define SYS_SERVICE_PERIOD 500
 
 static pdc_periph wattr_uart;
@@ -109,6 +111,7 @@ void wattr_sys_init(void)
 		//Configure PIO controllers
 		pio_config();
 		//Initialize UART driver structures, implement API
+		make_caprelay_driver(&wattr_caprelays);
 		make_rs232_driver(&wattr_uart);
 		make_spi_driver(&wattr_ade_config,&wattr_ade_zx,&wattr_ade_irq,&wattr_rlydvr);
 		make_twi_drivers(&wattr_fan_ctrl);

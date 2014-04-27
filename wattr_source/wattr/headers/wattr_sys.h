@@ -34,9 +34,13 @@ wbuff * lp_alloc_wbuff(uint32_t size);
 //handler.
 uint32_t lp_free_wbuff(wbuff *wb);
 
+//Parse a  4 byte command sent from an external host
+void comm_parse(wbuff *wb);
+
 //Initialize driver for the cap relays (writes directly to GPIO, w/o buffer)
 void make_caprelay_driver(pdc_periph *cr_driver);
 
 //Send initialization values to peripheral registers
 void init_the_init(void);
+
 #endif

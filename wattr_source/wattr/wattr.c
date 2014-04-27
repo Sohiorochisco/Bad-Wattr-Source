@@ -63,16 +63,14 @@ int main(void)
 	test_i2c->buff[1] = 0x1A;
 	periph_write_buff(WATTR_FAN_CTRL_PID,test_i2c);
     while (1) {
-		count = 0;
-		for(;count < 1000;++count){
-			++count;
-		}
-		while(!test_word){
-			test_word = periph_read_buff(WATTR_PERIODMSR_PID);
-		}
 		do{
-			st = periph_write_buff(WATTR_UART_PID,test_word);
-		}while(st);
+			test_word = periph_read_buff(WATTR_UART_PID);
+		}while(!test_word);
+		do{
+			er =periph_write_buff(WATTR_UART_PID,test_word);
+		}while(er);
+		//comm_parse(test_word);
+		//free_wbuff(test_word);
 		test_word = 0;
 	}
 }

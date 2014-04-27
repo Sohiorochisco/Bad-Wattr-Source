@@ -16,7 +16,9 @@
 #define RELAY_LED_TOGGLE(a) RELAY_LED_TOGGLE_MASK & a
 #define RELAY_TOGGLE_MASK PIO_PER_P0
 #define RELAY_TOGGLE(a) a & RELAY_TOGGLE_MASK
-#define CAP_RELAY_MASK 0xffu
+#define CAP_RELAY_MASK 0x7fu
+
+static wbuff * cap_relay_state;
 
 //Handler for the load toggle button on the DCM front panel
 void relay_toggle(void)
@@ -33,8 +35,12 @@ void relay_toggle(void)
 }
 uint32_t write_crelay(wbuff * wb)
 {
+	if(cap_relay_state){
+		free_wbuff(cap_relay_state);
+	}
 	PIOC->PIO_CODR = CAP_RELAY_MASK;
 	PIOC->PIO_SODR = CAP_RELAY_MASK & wb->buff[0];
+	cap_relay_state = wb;
 	return 0;
 }
 wbuff * read_crelay(void)

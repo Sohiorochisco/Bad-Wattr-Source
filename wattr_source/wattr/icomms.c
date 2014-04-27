@@ -11,6 +11,7 @@
 #include "headers/ade7753.h"
 
 #define RELAY_WRITE_HEADER 0xC7u
+
 void comm_parse(wbuff *wb)
 {
 	uint32_t st = 0;
@@ -29,6 +30,13 @@ void comm_parse(wbuff *wb)
 			nwb->buff[2] = RELAY_WRITE_HEADER;
 			nwb->buff[3] = wb->buff[2];
 			st = periph_write_buff(WATTR_RLYDVR_PID,nwb);
+		}
+		break;
+	case 'c':
+		nwb = alloc_wbuff(1);
+		if(nwb){
+			nwb->buff[0] = wb->buff[1];
+			st = periph_write_buff(WATTR_CAPRELAY_PID,nwb);
 		}
 		break;
 	default:

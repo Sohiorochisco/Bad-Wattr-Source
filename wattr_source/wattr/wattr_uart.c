@@ -11,7 +11,8 @@
 #define WATTR_UART_BAUD 19200 //9600 baud
 #define WATTR_UART_RX_DPTH 0x4
 #define WATTR_UART_TX_DPTH 0x2
-
+//Acknowledgement character
+#define ASCII_BELL 0x07
 
 
 ////////////////////////////////////////////////////
@@ -23,14 +24,17 @@ static wbuff *uart_tx_buff = 0;
 static wbuff *uart_rx_buff = 0;
 static void *uart_rx_fifo[WATTR_UART_RX_DPTH];
 static void *uart_tx_fifo[WATTR_UART_TX_DPTH];
+static uint32_t ack_flag = 0;
 
 
 void uart_endrx_handler(void)
 {
 	//Push the current block address onto the FIFO
 	uint32_t e = enqueue(&wattr_uart_rx_queue,uart_rx_buff);
+	//Get ready to acknowledge receipt
+	ack_flag = 0xff;
 	if(!e){
-		uart_rx_buff = alloc_wbuff(1);
+		uart_rx_buff = alloc_wbuff(4);
 	} 
 	if(uart_rx_buff){
 		PDC_UART0->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
@@ -87,7 +91,7 @@ static uint32_t wattr_uart_write(wbuff *w)
 
 void make_rs232_driver(pdc_periph *rs232)
 {
-	uart_rx_buff = alloc_wbuff(1);
+	uart_rx_buff = alloc_wbuff(4);
 	config_uart();
 	if(uart_rx_buff){
 		PDC_UART0->PERIPH_RPR = PERIPH_RPR_RXPTR((uint32_t)(uart_rx_buff->buff));
@@ -105,6 +109,13 @@ void service_uart(void)
 		if(uart_tx_buff){
 			free_wbuff(uart_tx_buff);
 			uart_tx_buff = 0;
+		}
+		if(ack_flag){
+			if(UART0->UART_SR & UART_SR_TXRDY){
+				UART0->UART_THR = UART_THR_TXCHR(ASCII_BELL);
+			}
+			ack_flag = 0;
+			return;
 		}
 		wbuff *tx_wb = dequeue(&wattr_uart_tx_queue); //wbuff to transmit
 		if(tx_wb){
