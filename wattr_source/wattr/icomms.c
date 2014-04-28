@@ -11,6 +11,7 @@
 #include "headers/ade7753.h"
 
 #define RELAY_WRITE_HEADER 0xC7u
+#define RRELAY_INIT_WRITE 0xFFC1FFC1u
 
 void comm_parse(wbuff *wb)
 {
@@ -53,7 +54,7 @@ void init_the_init(void)
 	uint32_t er = 0;
 	wbuff *rdi = alloc_wbuff(4);
 	if(rdi){
-		*(uint32_t*)(rdi->buff) = 0xC1FFC1FFu;
+		*(uint32_t*)(rdi->buff) = RRELAY_INIT_WRITE;
 		er = periph_write_buff(WATTR_RLYDVR_PID,rdi);
 	}
 	if(er){
@@ -70,22 +71,22 @@ void init_the_init(void)
 	if(er){
 		free_wbuff(ade_linc);
 	}
-	wbuff *ade_mode = alloc_wbuff(4);
-	if(ade_mode){
-		*(uint32_t*)(ade_mode->buff) = ADE_REG_MODE | ADE_WRITE_MASK |
-			ADE_MODE_CYCMODE;
-		er = periph_write_buff(WATTR_ADE_CONFIG_PID,ade_mode);
-	}
-	if(er){
-		free_wbuff(ade_mode);
-	}
-	wbuff *ade_irqen = alloc_wbuff(4);
-	if(ade_irqen){
-		*(uint32_t*)(ade_irqen->buff) = ADE_REG_IRQEN | ADE_WRITE_MASK |
-			ADE_IRQ_CYCEND | ADE_IRQ_WSMP;
-		er = periph_write_buff(WATTR_ADE_CONFIG_PID,ade_irqen);
-	}
-	if(er){
-		free_wbuff(ade_irqen);
-	}
+//	wbuff *ade_mode = alloc_wbuff(4);
+//	if(ade_mode){
+//		*(uint32_t*)(ade_mode->buff) = ADE_REG_MODE | ADE_WRITE_MASK |
+//			ADE_MODE_CYCMODE;
+//		er = periph_write_buff(WATTR_ADE_CONFIG_PID,ade_mode);
+//	}
+//	if(er){
+//		free_wbuff(ade_mode);
+//	}
+//	wbuff *ade_irqen = alloc_wbuff(4);
+//	if(ade_irqen){
+//		*(uint32_t*)(ade_irqen->buff) = ADE_REG_IRQEN | ADE_WRITE_MASK |
+//			ADE_IRQ_CYCEND | ADE_IRQ_WSMP;
+//		er = periph_write_buff(WATTR_ADE_CONFIG_PID,ade_irqen);
+//	}
+//	if(er){
+//		free_wbuff(ade_irqen);
+//	}
 }

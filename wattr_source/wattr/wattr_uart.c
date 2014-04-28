@@ -130,7 +130,7 @@ void service_uart(void)
 void UART0_Handler(void)
 {
 
-	if(UART0->UART_SR & UART_SR_RXBUFF){
+	if(UART0->UART_SR & UART_SR_ENDRX){
 		uart_endrx_handler();	
 	}
 }

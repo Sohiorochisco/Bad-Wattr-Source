@@ -16,7 +16,7 @@ enum spiwd{
 	IRQ_WRD,
 	ZX_WRD,
 	COM_WRD,
-	SCRN_WRD,
+	RC_WRD,
 	NONE
 	};
 
@@ -65,9 +65,10 @@ static void config_spi(void)
 	for(;csi < 4; ++csi){
 		/* Set clock phase and polarity for the ADE7753 chip select*/
 		SPI->SPI_CSR[csi] &= ~(SPI_CSR_CPOL) & ~(SPI_CSR_NCPHA) & 
-		~(SPI_CSR_SCBR_Msk) & ~(SPI_CSR_DLYBCT_Msk);
-		SPI->SPI_CSR[csi] |=  SPI_CSR_SCBR(32) | SPI_CSR_DLYBCT(16);
+		~(SPI_CSR_SCBR_Msk) & ~(SPI_CSR_DLYBCT_Msk) & ~(SPI_CSR_DLYBS_Msk);
 	}
+	SPI->SPI_CSR[1] |=  SPI_CSR_SCBR(32) | SPI_CSR_DLYBCT(16);
+	SPI->SPI_CSR[2] |=  SPI_CSR_SCBR(64) | SPI_CSR_DLYBCT(16) | SPI_CSR_DLYBS(16);
 	/*Ensure that the spi channel is in master mode, and
 	 *choose chip select channel zero */
 	SPI->SPI_MR = SPI_MR_MSTR | SPI_MR_PCS(13) | 
@@ -180,7 +181,7 @@ static void comms_rxend_handler(void)
 		ade_zxrx_buff = alloc_wbuff(ZX_WRD_LNGTH);
 		st = enqueue(&ade_zxrx_queue,rx_wr);
 		break;
-	case SCRN_WRD:
+	case RC_WRD:
 	case COM_WRD:
 		if(ade_rx_buff){
 			free_wbuff(ade_rx_buff);
@@ -235,6 +236,8 @@ void ade_zx_handler(void)
 
 void service_ade(void)
 {
+	NVIC_DisableIRQ(PIOC_IRQn);
+	NVIC_DisableIRQ(SPI_IRQn);
 	wbuff *tx_wb = 0; //wbuff to transmit
 	if(SPI->SPI_SR & SPI_SR_TXBUFE){
 		//see if there is a pending com write
@@ -249,13 +252,14 @@ void service_ade(void)
 				ade_flags.spiwrd = NONE;
 				free_wbuff(tx_wb);
 			}
+			tx_wb = 0;
 		}else{
 			tx_wb = dequeue(&screen_tx_queue);
 		}
 		if(tx_wb){
 			ade_rx_buff = alloc_wbuff(tx_wb->length);
 			if(ade_rx_buff){
-				ade_flags.spiwrd = SCRN_WRD;
+				ade_flags.spiwrd = RC_WRD;
 				spi_tx_buff = tx_wb;
 				spi_transfer_wbuff(tx_wb,ade_rx_buff,RELAY_CONTR_CS);
 			}else{
@@ -264,6 +268,8 @@ void service_ade(void)
 			}
 		}
 	}
+	NVIC_EnableIRQ(SPI_IRQn);
+	NVIC_EnableIRQ(PIOC_IRQn);
 	return;
 }
 

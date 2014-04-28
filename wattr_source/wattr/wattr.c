@@ -33,10 +33,6 @@ int main(void)
     SystemInit();
 	//Initialize driver background processes
 	wattr_sys_init();
-	uint32_t  indexer = 1000;
-	PIOA->PIO_ODSR &= ~(PIO_ODSR_P25);
-	for(;indexer > 0; --indexer){}
-	PIOA->PIO_ODSR |= PIO_ODSR_P25;
 	PIOD->PIO_SODR = PIO_SODR_P24;
 	PIOD->PIO_CODR = PIO_CODR_P23;
 	uint32_t er = 0;
@@ -66,11 +62,8 @@ int main(void)
 		do{
 			test_word = periph_read_buff(WATTR_UART_PID);
 		}while(!test_word);
-		do{
-			er =periph_write_buff(WATTR_UART_PID,test_word);
-		}while(er);
-		//comm_parse(test_word);
-		//free_wbuff(test_word);
+		comm_parse(test_word);
+		free_wbuff(test_word);
 		test_word = 0;
 	}
 }

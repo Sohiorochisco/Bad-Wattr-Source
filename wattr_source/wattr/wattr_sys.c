@@ -110,6 +110,11 @@ void wattr_sys_init(void)
 		pools_init();
 		//Configure PIO controllers
 		pio_config();
+		//Reset all of the peripherals
+		uint32_t  indexer = 1000;
+		PIOA->PIO_CODR = PIO_ODSR_P25;
+		for(;indexer > 0; --indexer){}
+		PIOA->PIO_SODR = PIO_ODSR_P25;
 		//Initialize UART driver structures, implement API
 		make_caprelay_driver(&wattr_caprelays);
 		make_rs232_driver(&wattr_uart);
