@@ -29,7 +29,7 @@
 #define POWER_FACTOR				0.827f
 #define CENTS_PER_KWH				0.13f
 #define ADE_SBIT_24					(0x1u<<23)					
-#define ADE_SINT24_CNVRT(SINT24)	(((SINT24 & ADE_SBIT_24)<<8)|(SINT24 & Ox7fffff))		
+#define ADE_SINT24_CNVRT(SINT24)	(((SINT24 & ADE_SBIT_24)<<8)|(SINT24 & Ox7fffff))
 // All write operations must be OR'ed with 0b80......
 #define ADE_WRITE_MASK					0x80
 
@@ -87,38 +87,38 @@
 
 #define ADE_REG_MODE				0x09
 #define ADE_REG_MODE_WBITS			16
-#define ADE_MODE_DISHPF			(0x1u<<23)
-#define ADE_MODE_DISLPF2		(0x1u<<22)
+#define ADE_MODE_DISHPF			(0x1u<<19)
+#define ADE_MODE_DISLPF2		(0x1u<<20)
 #define ADE_MODE_DISCF			(0x1u<<21)
-#define ADE_MODE_DISSAG			(0x1u<<20)
-#define ADE_MODE_ASUSPEND		(0x1u<<19)
-#define ADE_MODE_TEMPSEL		(0x1u<<18)
-#define ADE_MODE_SWRST			(0x1u<<17)
-#define ADE_MODE_CYCMODE		(0x1u<<16)
-#define ADE_MODE_DISCH1			(0x1u<<15)
-#define ADE_MODE_DISCH2			(0x1u<<14)
+#define ADE_MODE_DISSAG			(0x1u<<22)
+#define ADE_MODE_ASUSPEND		(0x1u<<23)
+#define ADE_MODE_TEMPSEL		(0x1u<<8)
+#define ADE_MODE_SWRST			(0x1u<<9)
+#define ADE_MODE_CYCMODE		(0x1u<<10)
+#define ADE_MODE_DISCH1			(0x1u<<11)
+#define ADE_MODE_DISCH2			(0x1u<<12)
 #define ADE_MODE_SWAP			(0x1u<<13)
 #define ADE_MODE_DTRT_Msk		0x3u
-#define ADE_MODE_DTRT_Shft		0x00
+#define ADE_MODE_DTRT_Shft		0x14
 #define ADE_MODE_DTRT(a)		((a & ADE_MODE_DTRT_Msk)<<ADE_MODE_DTRT_Shft)
 
 #define ADE_REG_IRQEN				0x0A
 #define ADE_REG_IRQEN_WBITS			16
-#define ADE_IRQ_AEHF			(0x1u<<23)
-#define ADE_IRQ_SAG				(0x1u<<22)
-#define ADE_IRQ_CYCEND			(0x1u<<21)
+#define ADE_IRQ_AEHF			(0x1u<<17)
+#define ADE_IRQ_SAG				(0x1u<<18)
+#define ADE_IRQ_CYCEND			(0x1u<<19)
 #define ADE_IRQ_WSMP			(0x1u<<20)
-#define ADE_IRQ_ZX				(0x1u<<19)
-#define ADE_IRQ_TEMP			(0x1u<<18)
-#define ADE_IRQ_RESET			(0x1u<<17)
-#define ADE_IRQ_AEOF			(0x1u<<16)
-#define ADE_IRQ_PKV				(0x1u<<15)
-#define ADE_IRQ_PKI				(0x1u<<14)
-#define ADE_IRQ_VAEHF			(0x1u<<13)
+#define ADE_IRQ_ZX				(0x1u<<21)
+#define ADE_IRQ_TEMP			(0x1u<<22)
+#define ADE_IRQ_RESET			(0x1u<<23)
+#define ADE_IRQ_AEOF			(0x1u<<8)
+#define ADE_IRQ_PKV				(0x1u<<9)
+#define ADE_IRQ_PKI				(0x1u<<10)
+#define ADE_IRQ_VAEHF			(0x1u<<11)
 #define ADE_IRQ_VAEOF			(0x1u<<12)
-#define ADE_IRQ_ZXTO			(0x1u<<11)
-#define ADE_IRQ_PPOS			(0x1u<<10)
-#define ADE_IRQ_PNEG			(0x1u<<9)
+#define ADE_IRQ_ZXTO			(0x1u<<13)
+#define ADE_IRQ_PPOS			(0x1u<<14)
+#define ADE_IRQ_PNEG			(0x1u<<15)
 
 #define ADE_REG_STATUS				0x0B
 #define ADE_REG_STATUS_WBITS		16
@@ -213,6 +213,7 @@
 #define ADE_REG_DIEREV				0x3F
 #define ADE_REG_DIEREV_WBITS		8
 
-//used to format a register write to the ade7753
 
+//format a 24 bit int from the ade as a big endian 32 bit int
+void ade_24int_to_32int(uint8_t *buff_in,uint8_t *buff_out);
 #endif /* ADE7753_H_ */

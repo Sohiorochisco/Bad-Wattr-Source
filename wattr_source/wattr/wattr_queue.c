@@ -66,38 +66,3 @@ inline uint32_t wrap(uint32_t i, uint32_t l)
 	return i;
 }
 
-/* Test main method 
- */
-
-/*
-uint32_t main()
-{
-	s_Queue *q = init_queue(5);
-	float t[7];
-	t[0] = 1.34;
-	t[1] = 34.2;
-	t[2] = 98.3;
-	t[3] = 7.77;
-	t[4] = 34.5;
-	t[5] = 54;
-	t[6] = 2.6;
-	uint32_t i = 0;
-	uint32_t j;
-	for(; i < 7; ++i){
-		j = enqueue(q, t + i);
-		if (j == 1){
-			printf("Queue Overflow\n");
-		}
-	}
-	float *f;
-	for (i = 0; i < 8 ; ++i){
-		f = dequeue(q);
-		if (f == 0){
-			printf("Queue Underflow\n");
-		}else{
-			printf("%g\n",*f);
-		}
-	}
-	return 0;
-}
-*/

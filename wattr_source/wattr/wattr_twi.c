@@ -19,35 +19,25 @@
 #define FAN_CTRL_PRIORITY 0
 #define TWI_RXQUEUE_DPTH 2
 #define TWI_TXQUEUE_DPTH 20
-#define COUNT_SLAVES(a) a +
-#define LIST_SLAVES(a) a , 
 #define TWI_SLAVE_COUNT 1
 
 
-//Use form XXX(address,tx queue,rx queue)
-#define TWI_SLAVES(XXX,TERM)\
-	XXX(FC_HARDWARE_ADDR)\
-	TERM
-	
-//static initialization of the memory structures needed for the twi driver	
-static uint8_t twi_addresses[] = {TWI_SLAVES(LIST_SLAVES,0)};
-static wbuff *tx_word;
-static wbuff *rx_word;
-queue rx_queues[TWI_SLAVE_COUNT];
-queue tx_queues[TWI_SLAVE_COUNT];
-void *tx_qbuf[TWI_RXQUEUE_DPTH * TWI_SLAVE_COUNT];
-void *rx_qbuf[TWI_TXQUEUE_DPTH * TWI_SLAVE_COUNT];
+static queue fan_ctrlrx_mqueue;
+static queue fan_ctrltx_mqueue;
+static void *fanctrlrx_qbuf[TWI_RXQUEUE_DPTH];
+static void *fanctrltx_qbuf[TWI_TXQUEUE_DPTH];
+
 
 //Peripheral read method for the fan controller 
 wbuff * fan_ctr_read(void)
 {
-	return dequeue(&(rx_queues[FAN_CTRL_PRIORITY]));
+	return dequeue(&fan_ctrlrx_mqueue);
 }
 
 //Peripheral write method for the fan controller
 uint32_t fan_ctr_write(wbuff * wb)
 {
-	return enqueue(&(tx_queues[FAN_CTRL_PRIORITY]),wb);
+	return enqueue(&fan_ctrltx_mqueue,wb);
 }
 
 void config_twi(void)
@@ -63,23 +53,24 @@ void config_twi(void)
 }
 
 
-void twi_send(Twi *this_twi, wbuff *nwb)
+void twi_send(Twi *this_twi, wbuff *nwb, uint32_t address)
 {
+	this_twi->TWI_MMR = TWI_MMR_DADR(address) | TWI_MMR_IADRSZ_1_BYTE;
 	this_twi->TWI_IADR = TWI_IADR_IADR(nwb->buff[0]);
-	this_twi->TWI_CR = TWI_CR_STOP;
+	this_twi->TWI_CR =  TWI_CR_MSEN;
 	this_twi->TWI_THR = nwb->buff[1];
+	this_twi->TWI_CR = TWI_CR_STOP;
 }
 
 void make_twi_drivers(pdc_periph *fanctrl_driver)
 {
 	int i = 0;
-	for(;i < TWI_SLAVE_COUNT;++i){
-		init_queue(&(rx_queues[i]),rx_qbuf[i * TWI_RXQUEUE_DPTH],TWI_RXQUEUE_DPTH);
-		init_queue(&(tx_queues[i]),tx_qbuf[i * TWI_RXQUEUE_DPTH],TWI_TXQUEUE_DPTH);
-	}
 	config_twi();
+	init_queue(&fan_ctrlrx_mqueue,fanctrlrx_qbuf,TWI_RXQUEUE_DPTH);
+	init_queue(&fan_ctrltx_mqueue,fanctrltx_qbuf,TWI_TXQUEUE_DPTH);
 	fanctrl_driver->read = &fan_ctr_read;
 	fanctrl_driver->write = &fan_ctr_write;
+	return;
 }
 
 void twi_rxbuff_handler(Pdc *twi_pdc)
@@ -89,29 +80,25 @@ void twi_rxbuff_handler(Pdc *twi_pdc)
 
 
 //Complete the transfer
-static void twi_twbufe_handler(Pdc *twi_pdc,Twi *tx_twi)
-{
-	twi_pdc->PERIPH_PTCR = PERIPH_PTCR_TXTDIS;
-	while(!(tx_twi->TWI_SR & TWI_SR_TXRDY)){}
-	tx_twi->TWI_CR = TWI_CR_STOP;
-	tx_twi->TWI_THR = TWI_THR_TXDATA(tx_word->buff[tx_word->length - 1]);
-}
+//static void twi_twbufe_handler(Pdc *twi_pdc,Twi *tx_twi)
+//{
+//	twi_pdc->PERIPH_PTCR = PERIPH_PTCR_TXTDIS;
+//	while(!(tx_twi->TWI_SR & TWI_SR_TXRDY)){}
+//	tx_twi->TWI_CR = TWI_CR_STOP;
+//	tx_twi->TWI_THR = TWI_THR_TXDATA(tx_word->buff[tx_word->length - 1]);
+//}
 
 void service_twi(void)
 {
-	if(!(TWI0->TWI_SR & TWI_SR_TXRDY)){
+	if(!(TWI0->TWI_SR & TWI_SR_TXCOMP)){
 		return;
 	}
 	wbuff *tx_wr = 0;
 	int i = 0;
 	//attempt dequeuing peripheral tx buffers in priority order
-	for(; (tx_wr = 0) || i < TWI_SLAVE_COUNT;++i){
-		tx_wr = dequeue(&(tx_queues[i]));
-	}
+	tx_wr = dequeue(&fan_ctrltx_mqueue);
 	if(tx_wr){
-		TWI0->TWI_MMR &= ~(TWI_MMR_DADR_Msk);
-		TWI0->TWI_MMR = TWI_MMR_DADR(twi_addresses[i]);
-		twi_send(TWI0,tx_wr);
+		twi_send(TWI0,tx_wr,FC_HARDWARE_ADDR);
 		//Since the txbuff is only used by value,
 		//It may be freed after the transfer is started
 		free_wbuff(tx_wr);

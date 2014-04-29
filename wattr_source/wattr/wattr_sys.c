@@ -10,7 +10,7 @@
 #include "headers/wattr_pio.h"
 #include "headers/wattr_sys.h"
 
-#define SYS_SERVICE_PERIOD 500
+#define SYS_SERVICE_PERIOD 1000
 
 static pdc_periph wattr_uart;
 static pdc_periph wattr_ade_zx;
@@ -51,9 +51,9 @@ static uint8_t wattr_prph_count = WATTR_PERIPHS(COUNT);
 wbuff *periph_read_buff(uint8_t periph_id)
 {
 	if(periph_id < wattr_prph_count){
-		//SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
+		SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk);
 		wbuff *wb = wattr_prphs[periph_id]->read();
-		//SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+		SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 		return wb;
 	}else{
 		return 0;

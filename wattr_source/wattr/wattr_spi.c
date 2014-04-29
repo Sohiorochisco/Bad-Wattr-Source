@@ -7,7 +7,7 @@
 #define ZX_INDICATOR_MASK PIO_PER_P22
 #define RELAY_CONTR_CS 2
 #define RELAY_CONTR_TXBUFF_DPTH 4
-#define ZX_WRD_LNGTH MED_BLOCK_WL
+#define ZX_WRD_LNGTH 8
 #define IRQ_WRD_LNGTH MED_BLOCK_WL
 //Used to account for the mismatch between the tx and rx buffers
 #define SPI_RX_OFFSET 0
@@ -42,12 +42,12 @@ static struct ade_fl ade_flags;
 
 /*Standard write for IRQ interrupt from ADE7753*/
 static uint8_t irq_wr[] = {
-	0x00,ADE_REG_AENERGY,0x00,0x00,0x00,ADE_REG_RAENERGY,0x00,0x00,0x00,
-	0x00,0x00,0x00
+	ADE_REG_RSTSTATUS,0x00,0x00,0x00,
+	ADE_REG_AENERGY,0x00,0x00,0x00,
+	ADE_REG_RAENERGY,0x00,0x00,0x00
 };
 static uint8_t zx_wr[] = {
-	0x00,ADE_REG_VRMS,0x00,0x00,0x00,ADE_REG_IRMS,0x00,0x00,0x00,
-	0x00,0x00,0x00
+	ADE_REG_VRMS,0x00,0x00,0x00,ADE_REG_IRMS,0x00,0x00,0x00
 };
 
 /*Static buffers for one-off ade transfers or screen writes*/
@@ -145,7 +145,7 @@ void make_spi_driver(pdc_periph *ade_configure, pdc_periph *ade_zxread,
 	ade_zx_buff.buff = zx_wr;
 	ade_zx_buff.length = ZX_WRD_LNGTH;
 	ade_irq_buff.buff = irq_wr;
-	ade_irq_buff.length = TNY_BLOCK_WL;
+	ade_irq_buff.length = IRQ_WRD_LNGTH;
 	//Set all flags to zero (because you never know...)
 	ade_flags.spiwrd = NONE;
 	init_queue(&ade_zxrx_queue,ade_zxrxq_buff,ADE_RXBUFF_DPTH);
@@ -197,7 +197,6 @@ static void comms_rxend_handler(void)
 	if(st){
 		free_wbuff(rx_wr);
 	}
-	NVIC_ClearPendingIRQ(PIOC_IRQn);
 }
 
 void SPI_Handler(void)
@@ -206,7 +205,6 @@ void SPI_Handler(void)
 		comms_rxend_handler();
 		SPI->SPI_IDR = SPI_SR_TXEMPTY;
 	}
-	NVIC_ClearPendingIRQ(PIOC_IRQn);
 	return;
 }
 
@@ -281,5 +279,16 @@ void write_ade_reg(uint8_t  *b,uint32_t wrd,uint8_t reg, uint32_t wl)
 	b[1] = (uint8_t)shft_wrd >> 16;
 	b[2] = (uint8_t)((shft_wrd << 8) >> 16);
 	b[3] = (uint8_t)((shft_wrd << 16) >> 16);
+	return;
+}
+
+//used to format a 32bit signed, big endian int as a 32 bit signed int,
+//also big endian
+void ade_24int_to_32int(uint8_t *buff_in,uint8_t *buff_out)
+{
+	buff_out[0] = buff_in[0];
+	buff_out[1] = buff_in[1];
+	buff_out[2] = buff_in[2];
+	buff_out[3] = buff_in[0];
 	return;
 }

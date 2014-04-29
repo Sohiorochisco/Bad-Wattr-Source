@@ -10,7 +10,9 @@
 #include "headers/wattr_mem.h"
 
 #define TIMER_COUNTER_BUFF_DPTH 3
-#define SUM_SQINT_TO_59 70210
+#define PYRAMIDAL_59 70210
+#define PYRAMIDAL_39 20540
+#define MAX_SQINTSUM PYRAMIDAL_59
 #define MAX_SAMPLE 60
 
 static queue periods_queue;
@@ -31,7 +33,7 @@ void sample_period(void)
 		//reset the counter
 		TC0->TC_CHANNEL[0].TC_CCR |= TC_CCR_SWTRG;
 		sample_count = 0;
-		*(pending_period->buff) = (uint32_t)(sum_of_sq/SUM_SQINT_TO_59);
+		*(pending_period->buff) = (uint32_t)(sum_of_sq/PYRAMIDAL_59);
 		uint32_t st = enqueue(&periods_queue,pending_period);
 		if(st){
 			free_wbuff(pending_period);

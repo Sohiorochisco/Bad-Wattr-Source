@@ -23,7 +23,7 @@
 //List interrupt lines and trigger conditions
 //In order of priority for each peripheral.
 //Use format ENTRY*PIA letter*(line num,both edge,rising edge,falling edge,
-//, opendrain,handler pointer)
+//, open drain,handler pointer)
 	//ENTRYA(PIO_PER_P15,0,0,PIO_FELLSR_P15,&ade_irq_handler)
 	//ENTRYC(PIO_PER_P7,PIO_AIMER_P7,0,0,&ade_zx_handler)
 	
@@ -154,7 +154,9 @@ static void config_pio_irq(void)
 	PIOC->PIO_MDER = WATTR_INTERRUPT_LINES(X06,X06,XE,X06);
 	PIOD->PIO_MDER = WATTR_INTERRUPT_LINES(X06,X06,X06,XE);
 	
+//set level sensitive interrupts:
 
+PIOC->PIO_LSR = PIO_LSR_P9;// setting ade irq as a level sensitive interrupt
 	return;
 }
 

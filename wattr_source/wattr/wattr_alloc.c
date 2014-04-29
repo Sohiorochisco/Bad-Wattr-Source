@@ -11,6 +11,7 @@
 	do{\
 	FUNC(SPI_IRQn);\
 	FUNC(UART0_IRQn);\
+	FUNC(TWI0_IRQn);\
 	}while(0)
 	
 //static allocation for each of the memory pools
@@ -79,6 +80,7 @@ void pools_init()
 		enqueue(&sb_mqueue,i);
 		++k;
 	}
+	k = 0;
 	for(i=db_pool;k < DOUBLE_BYTE_NUM; i+=2){
 		enqueue(&db_mqueue,i);
 		++k;

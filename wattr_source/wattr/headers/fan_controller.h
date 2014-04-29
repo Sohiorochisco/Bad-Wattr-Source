@@ -6,6 +6,8 @@
  *  Author: mhaynes
  */ 
 
+#ifndef WATTR_FAN_CONTROLLER_DEFS
+#define WATTR_FAN_CONTROLLER_DEFS
 /* MAX6615 register definitions */
 
 //First temperature reading channel
@@ -23,7 +25,7 @@
 //Over temperature mask
 #define FC_REG_OT_MASK 0x6u
 //PWM1 start duty cycle
-#define FC_REG_PWM1_DC 0x7u
+#define FC_REG_PWM1_SDC 0x7u
 //PWM2 start duty cycle 
 #define FC_REG_PWM2_SDC 0x8u
 //PWM1 max duty cycle
@@ -74,3 +76,21 @@
 /////////////////////////////////////////////////////////////////
 
 #define FC_HARDWARE_ADDR 0x18
+
+
+/*Current register write value definitions */
+//Current start duty cycle for the pwm1
+#define FC_PWM1_START_DC	0x40u
+//Current configuration byte value
+#define FC_CONFIG_BYTE		0x1Au
+//Fan controller channel one start temperature
+#define FC_CH1_START_TEMP	0x15u
+//Fan controller configuration (which is different from config byte...)
+#define FC_CONFIGURE		0x20u
+//Fan controller duty cycle rate of change
+#define FC_DC_DT			0x60u
+//Fan controller duty cycle step size
+#define FC_DC_STEP_SIZE		0x50u
+//Fan controller pwm frequency 
+#define FC_PWM_FREQ			0x3Fu
+#endif

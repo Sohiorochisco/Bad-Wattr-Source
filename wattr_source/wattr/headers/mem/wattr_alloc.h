@@ -20,8 +20,8 @@
 #define TNY_BLOCK_WL	8
 #define TNY_BLOCK_NUM	128
 
-#define SINGLE_BYTE_NUM 20
-#define DOUBLE_BYTE_NUM 16
+#define SINGLE_BYTE_NUM 32
+#define DOUBLE_BYTE_NUM 32
 
 void pools_init();
 
